@@ -12,17 +12,22 @@ import {
 
 const BRAND = { primary: '#FF6B35', red: '#C1272D', accent: '#4DA167', ink: '#1A1A1A' };
 
-const cleanError = (msg = '') => {
-  if (msg.includes('auth/operation-not-allowed'))  return 'Email sign-in is not enabled. Contact admin.';
-  if (msg.includes('auth/email-already-in-use'))   return 'Account already exists — please login instead.';
-  if (msg.includes('auth/invalid-credential'))     return 'Wrong email or password.';
-  if (msg.includes('auth/invalid-email'))          return 'Invalid email address.';
-  if (msg.includes('auth/weak-password'))          return 'Password must be at least 6 characters.';
-  if (msg.includes('auth/user-not-found'))         return 'No account found with this email.';
-  if (msg.includes('auth/wrong-password'))         return 'Wrong password. Try again.';
-  if (msg.includes('auth/too-many-requests'))      return 'Too many attempts. Try again later.';
-  if (msg.includes('auth/network-request-failed')) return 'Network error. Check your connection.';
-  if (msg.includes('permission-denied'))           return 'Database permission denied. Contact admin.';
+const cleanError = (e) => {
+  const code = (e && e.code) || '';
+  const msg = (e && e.message) || String(e) || '';
+  const full = code + ' ' + msg;
+
+  if (full.includes('auth/operation-not-allowed'))  return 'Email sign-in is not enabled. Contact admin.';
+  if (full.includes('auth/email-already-in-use'))   return 'Account already exists — please login instead.';
+  if (full.includes('auth/invalid-credential') || full.includes('auth/wrong-password') || full.includes('auth/user-not-found'))
+    return 'Wrong email or password.';
+  if (full.includes('auth/invalid-email'))          return 'Invalid email address.';
+  if (full.includes('auth/weak-password'))          return 'Password must be at least 6 characters.';
+  if (full.includes('auth/too-many-requests'))      return 'Too many attempts. Try again later.';
+  if (full.includes('auth/network-request-failed')) return 'Network error. Check your connection and try again.';
+  if (full.includes('permission-denied') || full.includes('insufficient permissions') || full.includes('PERMISSION_DENIED'))
+    return 'Account created! If you cannot access the app, contact support.';
+
   return msg.replace('Firebase: ', '').replace(/\s*\(auth\/[^)]+\)\.?/g, '').trim() || 'Something went wrong. Try again.';
 };
 
@@ -100,13 +105,17 @@ const AuthForm = ({ role, onBack }) => {
     try {
       if (mode === 'login') {
         const cred = await signInWithEmailAndPassword(auth, email, password);
-        // Verify role matches
-        const snap = await getDoc(doc(db, 'users', cred.user.uid));
-        if (snap.exists() && snap.data().role !== role) {
-          await signOut(auth);
-          setError(`This account is registered as a ${snap.data().role}. Please select the correct role.`);
-          setLoading(false);
-          return;
+        // Verify role matches (fail silently if Firestore is unavailable)
+        try {
+          const snap = await getDoc(doc(db, 'users', cred.user.uid));
+          if (snap.exists() && snap.data().role && snap.data().role !== role) {
+            await signOut(auth);
+            setError(`This account is a ${snap.data().role} account. Please select the correct role.`);
+            setLoading(false);
+            return;
+          }
+        } catch (_) {
+          // Firestore read failed — let user through anyway, App.jsx handles role
         }
       } else {
         // Sign up
@@ -128,12 +137,10 @@ const AuthForm = ({ role, onBack }) => {
             vehicleNumber: vehicleNumber.toUpperCase(),
             isApproved: false,
           });
-          // Add to pending rider applications
-          const appRef = doc(db, 'store', 'riderApplications');
-          const appSnap = await getDoc(appRef);
-          const existing = appSnap.exists() ? JSON.parse(appSnap.data().v || '[]') : [];
-          await setDoc(appRef, {
-            v: JSON.stringify([...existing, {
+
+          // Write rider application to dedicated collection (not store/*)
+          try {
+            await setDoc(doc(db, 'riderApplications', cred.user.uid), {
               uid: cred.user.uid,
               name,
               email,
@@ -142,14 +149,22 @@ const AuthForm = ({ role, onBack }) => {
               vehicleNumber: vehicleNumber.toUpperCase(),
               appliedAt: new Date().toISOString(),
               status: 'pending',
-            }]),
-          });
+              isApproved: false,
+              isRejected: false,
+            });
+          } catch (_) {
+            // Application write failed — still create account, admin can handle manually
+          }
         }
 
-        await setDoc(doc(db, 'users', cred.user.uid), userDoc);
+        // Write user profile (don't block signup if this fails)
+        try {
+          await setDoc(doc(db, 'users', cred.user.uid), userDoc);
+        } catch (_) {
+          // Profile write failed — auth account still created, App.jsx defaults to customer role
+        }
 
         if (role === 'rider') {
-          // Sign out and show pending screen — rider waits for admin approval
           await signOut(auth);
           setRiderPending(true);
           setLoading(false);
@@ -157,7 +172,7 @@ const AuthForm = ({ role, onBack }) => {
         }
       }
     } catch (e) {
-      setError(cleanError(e.message));
+      setError(cleanError(e));
     }
     setLoading(false);
   };

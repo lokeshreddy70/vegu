@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ShoppingCart, Search, MapPin, Clock, Plus, Minus, Trash2, ChevronRight, Home, Package, User, Heart, Star, Zap, X, Check, CreditCard, Wallet, Banknote, ArrowLeft, Bell, Tag, Truck, Phone, Settings, Edit3, Save, AlertCircle, TrendingUp, IndianRupee, Box, Users, BarChart3, ToggleLeft, ToggleRight, Sparkles, Globe, LogOut } from 'lucide-react';
 import { auth, db, isConfigured } from './firebase';
 import { signOut } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDocs, collection } from 'firebase/firestore';
 import { RiderDeliveryMap, CustomerTrackingMap } from './LiveMap';
 
 const doSignOut = async () => {
@@ -1647,11 +1647,18 @@ function AdminApp({ user, userData, onSignOut }) {
   const [settings, setSettings] = useStorage('settings', DEFAULT_SETTINGS);
   const [orders, setOrders] = useStorage('orders', []);
   const [subscriptionPlans, setSubscriptionPlans] = useStorage('subscriptionPlans', DEFAULT_SUBSCRIPTION_PLANS);
-  const [riderApplications, setRiderApplications] = useStorage('riderApplications', []);
+  const [riderApplications, setRiderApplications] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
   const [editingBanner, setEditingBanner] = useState(null);
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingPlan, setEditingPlan] = useState(null);
+
+  useEffect(() => {
+    if (!db) return;
+    getDocs(collection(db, 'riderApplications'))
+      .then(snap => setRiderApplications(snap.docs.map(d => d.data())))
+      .catch(() => {});
+  }, []);
 
   const todayOrders = orders.filter(o => new Date(o.placedAt).toDateString() === new Date().toDateString());
   const todayRevenue = todayOrders.reduce((s, o) => s + o.total, 0);
@@ -2466,19 +2473,24 @@ function AdminApp({ user, userData, onSignOut }) {
     const rejectedRiders = riderApplications.filter(r => r.isRejected);
 
     const approveRider = async (rider) => {
-      const updated = riderApplications.map(r => r.uid === rider.uid ? { ...r, isApproved: true, isRejected: false } : r);
+      const updated = riderApplications.map(r => r.uid === rider.uid ? { ...r, isApproved: true, isRejected: false, status: 'approved' } : r);
       setRiderApplications(updated);
-      // Also update the user's Firestore doc
       try {
-        if (db) await setDoc(doc(db, 'users', rider.uid), { isApproved: true }, { merge: true });
+        if (db) {
+          await setDoc(doc(db, 'users', rider.uid), { isApproved: true }, { merge: true });
+          await setDoc(doc(db, 'riderApplications', rider.uid), { isApproved: true, isRejected: false, status: 'approved' }, { merge: true });
+        }
       } catch (e) {}
     };
 
     const rejectRider = async (rider) => {
-      const updated = riderApplications.map(r => r.uid === rider.uid ? { ...r, isRejected: true, isApproved: false } : r);
+      const updated = riderApplications.map(r => r.uid === rider.uid ? { ...r, isRejected: true, isApproved: false, status: 'rejected' } : r);
       setRiderApplications(updated);
       try {
-        if (db) await setDoc(doc(db, 'users', rider.uid), { isApproved: false }, { merge: true });
+        if (db) {
+          await setDoc(doc(db, 'users', rider.uid), { isApproved: false }, { merge: true });
+          await setDoc(doc(db, 'riderApplications', rider.uid), { isRejected: true, isApproved: false, status: 'rejected' }, { merge: true });
+        }
       } catch (e) {}
     };
 
