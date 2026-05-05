@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(scoop install gh 2>$null)",
+      "PowerShell(if \\($LASTEXITCODE -ne 0\\) { \"scoop not available\" })",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth status)"
+    ]
+  }
+}

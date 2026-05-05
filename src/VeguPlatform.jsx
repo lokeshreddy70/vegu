@@ -1,7 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ShoppingCart, Search, MapPin, Clock, Plus, Minus, Trash2, ChevronRight, Home, Package, User, Heart, Star, Zap, X, Check, CreditCard, Wallet, Banknote, ArrowLeft, Bell, Tag, Truck, Phone, Settings, Edit3, Save, AlertCircle, TrendingUp, IndianRupee, Box, Users, BarChart3, ToggleLeft, ToggleRight, Sparkles, Globe, LogOut } from 'lucide-react';
-import { signOut } from 'firebase/auth';
-import { auth } from './firebase';
+import { auth, isConfigured } from './firebase';
+import { RiderDeliveryMap, CustomerTrackingMap } from './LiveMap';
+
+const doSignOut = async () => {
+  if (isConfigured && auth) {
+    const { signOut } = await import('firebase/auth');
+    await doSignOut();
+  } else {
+    window.location.reload();
+  }
+};
 
 // ============ DEFAULT DATA (LOCALIZED FOR NELLORE) ============
 const DEFAULT_CATEGORIES = [
@@ -770,7 +779,7 @@ function CustomerApp({ user }) {
             const newStatus = ['placed', 'packing', 'out_for_delivery', 'delivered'][stepIdx + 1];
             const updated = { ...activeOrder, status: newStatus };
             setActiveOrder(updated);
-            setOrders(orders.map(o => o.id === updated.id ? updated : o));
+            setAllOrders(allOrders.map(o => o.id === updated.id ? updated : o));
           }
         }, 4000);
         return () => clearTimeout(t);
@@ -787,7 +796,14 @@ function CustomerApp({ user }) {
           </h1>
           <p className="text-sm text-white/90 mt-1">{steps[stepIdx].sub}</p>
         </div>
-        <div className="mx-4 -mt-4 bg-white rounded-2xl p-5 shadow-lg">
+        {/* Live map — shows when order is packing or out for delivery */}
+        {stepIdx >= 1 && (
+          <div className="mx-4 -mt-4 mb-3 shadow-lg">
+            <CustomerTrackingMap order={activeOrder} stepIdx={stepIdx} />
+          </div>
+        )}
+
+        <div className={`mx-4 ${stepIdx >= 1 ? '' : '-mt-4'} bg-white rounded-2xl p-5 shadow-lg`}>
           <div className="space-y-4">
             {steps.map((s, i) => (
               <div key={i} className="flex items-start gap-3">
@@ -945,7 +961,7 @@ function CustomerApp({ user }) {
       </div>
       <div className="mx-4 mt-3 mb-8">
         <button
-          onClick={() => signOut(auth)}
+          onClick={() => doSignOut()}
           className="w-full py-3.5 rounded-2xl border-2 border-red-200 text-red-500 font-black text-sm flex items-center justify-center gap-2 active:bg-red-50"
         >
           <LogOut size={16} /> Sign Out
@@ -1207,16 +1223,9 @@ function RiderApp({ user }) {
           <div className="text-white/90 text-sm mt-1">{currentStage.label}</div>
         </div>
 
-        {/* Mock Map */}
-        <div className="mx-4 -mt-4 bg-white rounded-2xl overflow-hidden shadow-lg">
-          <div className="h-40 relative" style={{ background: 'linear-gradient(135deg, #e0f2fe 0%, #fef3c7 100%)' }}>
-            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 160">
-              <path d="M 50 130 Q 150 100 200 80 T 350 30" stroke={BRAND.primary} strokeWidth="3" strokeDasharray="6 4" fill="none" />
-            </svg>
-            <div className="absolute left-6 bottom-6 w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-white text-lg shadow-lg">🏪</div>
-            <div className="absolute right-6 top-4 w-10 h-10 rounded-full flex items-center justify-center text-white text-lg shadow-lg" style={{ background: BRAND.primary }}>🏠</div>
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full flex items-center justify-center text-xl shadow-lg" style={{ animation: 'pulse-scale 1.5s ease-in-out infinite' }}>🛵</div>
-          </div>
+        {/* Live Map */}
+        <div className="mx-4 -mt-4 shadow-lg">
+          <RiderDeliveryMap order={o} />
         </div>
 
         {/* Customer Info */}
@@ -1423,7 +1432,7 @@ function RiderApp({ user }) {
         </div>
         <div className="mx-4 mt-3 mb-8">
           <button
-            onClick={() => signOut(auth)}
+            onClick={() => doSignOut()}
             className="w-full py-3.5 rounded-2xl border-2 border-red-200 text-red-500 font-black text-sm flex items-center justify-center gap-2 active:bg-red-50"
           >
             <LogOut size={16} /> Sign Out
@@ -1503,7 +1512,7 @@ function AdminApp({ user }) {
               <div className={`w-2 h-2 rounded-full ${settings.isOpen ? 'bg-emerald-400' : 'bg-red-400'}`} />
               <span className="text-white text-xs font-bold">{settings.isOpen ? 'OPEN' : 'CLOSED'}</span>
             </button>
-            <button onClick={() => signOut(auth)} className="bg-white/10 backdrop-blur p-2 rounded-full">
+            <button onClick={() => doSignOut()} className="bg-white/10 backdrop-blur p-2 rounded-full">
               <LogOut size={16} color="white" />
             </button>
           </div>
