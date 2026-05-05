@@ -12,6 +12,8 @@ const BRAND = { primary: '#FF6B35', red: '#C1272D', accent: '#4DA167', ink: '#1A
 
 // Phone number → internal email (user never sees this)
 const phoneToEmail = (phone) => `user_${phone.replace(/\D/g, '')}@vegu.app`;
+// PIN → Firebase password: pad to 9 chars to meet Firebase's 6-char minimum
+const pinToPassword = (pin) => pin + '_vg!3x';
 
 const cleanError = (e) => {
   const code = (e && e.code) || '';
@@ -134,7 +136,7 @@ const PhoneAuthForm = ({ role, onBack }) => {
     setLoading(true); setError('');
     try {
       const email = phoneToEmail(phone);
-      const cred = await signInWithEmailAndPassword(auth, email, pin);
+      const cred = await signInWithEmailAndPassword(auth, email, pinToPassword(pin));
       // Check role matches
       try {
         const snap = await getDoc(doc(db, 'users', cred.user.uid));
@@ -170,7 +172,7 @@ const PhoneAuthForm = ({ role, onBack }) => {
     setLoading(true); setError('');
     try {
       const email = phoneToEmail(phone);
-      const cred = await createUserWithEmailAndPassword(auth, email, pin);
+      const cred = await createUserWithEmailAndPassword(auth, email, pinToPassword(pin));
       await updateProfile(cred.user, { displayName: name.trim() });
 
       const userDoc = {
