@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
 import { auth, db, isConfigured } from './firebase';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+  signOut,
+} from 'firebase/auth';
+import {
+  doc, getDoc, setDoc,
+} from 'firebase/firestore';
 
 const BRAND = { primary: '#FF6B35', red: '#C1272D', accent: '#4DA167', ink: '#1A1A1A' };
 
@@ -89,25 +98,20 @@ const AuthForm = ({ role, onBack }) => {
     setLoading(true);
 
     try {
-      const [authMod, firestoreMod] = await Promise.all([
-        import('firebase/auth'),
-        import('firebase/firestore'),
-      ]);
-
       if (mode === 'login') {
-        const cred = await authMod.signInWithEmailAndPassword(auth, email, password);
+        const cred = await signInWithEmailAndPassword(auth, email, password);
         // Verify role matches
-        const snap = await firestoreMod.getDoc(firestoreMod.doc(db, 'users', cred.user.uid));
+        const snap = await getDoc(doc(db, 'users', cred.user.uid));
         if (snap.exists() && snap.data().role !== role) {
-          await authMod.signOut(auth);
+          await signOut(auth);
           setError(`This account is registered as a ${snap.data().role}. Please select the correct role.`);
           setLoading(false);
           return;
         }
       } else {
         // Sign up
-        const cred = await authMod.createUserWithEmailAndPassword(auth, email, password);
-        await authMod.updateProfile(cred.user, { displayName: name });
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(cred.user, { displayName: name });
 
         const userDoc = {
           role,
@@ -125,10 +129,10 @@ const AuthForm = ({ role, onBack }) => {
             isApproved: false,
           });
           // Add to pending rider applications
-          const appRef = firestoreMod.doc(db, 'store', 'riderApplications');
-          const appSnap = await firestoreMod.getDoc(appRef);
+          const appRef = doc(db, 'store', 'riderApplications');
+          const appSnap = await getDoc(appRef);
           const existing = appSnap.exists() ? JSON.parse(appSnap.data().v || '[]') : [];
-          await firestoreMod.setDoc(appRef, {
+          await setDoc(appRef, {
             v: JSON.stringify([...existing, {
               uid: cred.user.uid,
               name,
@@ -142,11 +146,11 @@ const AuthForm = ({ role, onBack }) => {
           });
         }
 
-        await firestoreMod.setDoc(firestoreMod.doc(db, 'users', cred.user.uid), userDoc);
+        await setDoc(doc(db, 'users', cred.user.uid), userDoc);
 
         if (role === 'rider') {
           // Sign out and show pending screen — rider waits for admin approval
-          await authMod.signOut(auth);
+          await signOut(auth);
           setRiderPending(true);
           setLoading(false);
           return;
