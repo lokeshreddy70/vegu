@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Search, MapPin, Clock, Plus, Minus, Trash2, ChevronRight, Home, Package, User, Heart, Star, Zap, X, Check, CreditCard, Wallet, Banknote, ArrowLeft, Bell, Tag, Truck, Phone, Settings, Edit3, Save, AlertCircle, TrendingUp, IndianRupee, Box, Users, BarChart3, ToggleLeft, ToggleRight, Sparkles, Globe } from 'lucide-react';
+import { ShoppingCart, Search, MapPin, Clock, Plus, Minus, Trash2, ChevronRight, Home, Package, User, Heart, Star, Zap, X, Check, CreditCard, Wallet, Banknote, ArrowLeft, Bell, Tag, Truck, Phone, Settings, Edit3, Save, AlertCircle, TrendingUp, IndianRupee, Box, Users, BarChart3, ToggleLeft, ToggleRight, Sparkles, Globe, LogOut } from 'lucide-react';
+import { signOut } from 'firebase/auth';
+import { auth } from './firebase';
 
 // ============ DEFAULT DATA (LOCALIZED FOR NELLORE) ============
 const DEFAULT_CATEGORIES = [
@@ -135,7 +137,7 @@ const BRAND = {
 };
 
 // ============ MAIN APP ROUTER ============
-function VeguPlatform() {
+function VeguPlatform({ user }) {
   const [appMode, setAppMode] = useStorage('appMode', 'customer'); // 'customer' | 'rider' | 'admin'
 
   return (
@@ -151,13 +153,13 @@ function VeguPlatform() {
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
         .shimmer { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); background-size: 200% 100%; animation: shimmer 2s infinite; }
       `}</style>
-      
+
       {/* Mode Switcher (top floating) */}
       <ModeSwitcher appMode={appMode} setAppMode={setAppMode} />
 
-      {appMode === 'customer' && <CustomerApp />}
-      {appMode === 'rider' && <RiderApp />}
-      {appMode === 'admin' && <AdminApp />}
+      {appMode === 'customer' && <CustomerApp user={user} />}
+      {appMode === 'rider' && <RiderApp user={user} />}
+      {appMode === 'admin' && <AdminApp user={user} />}
     </div>
   );
 }
@@ -210,16 +212,18 @@ const ModeSwitcher = ({ appMode, setAppMode }) => {
 // ===========================================================
 // ============ CUSTOMER APP ============
 // ===========================================================
-function CustomerApp() {
+function CustomerApp({ user }) {
   const [screen, setScreen] = useState('splash');
   const [products] = useStorage('products', DEFAULT_PRODUCTS);
   const [categories] = useStorage('categories', DEFAULT_CATEGORIES);
   const [banners] = useStorage('banners', DEFAULT_BANNERS);
   const [settings] = useStorage('settings', DEFAULT_SETTINGS);
   const [cart, setCart] = useStorage('cart', {});
-  const [orders, setOrders] = useStorage('orders', []);
+  const [allOrders, setAllOrders] = useStorage('orders', []);
   const [address, setAddress] = useStorage('address', { line: 'D.No 25-1-12, Trunk Road', area: 'Stonehousepet, Nellore', pin: '524002' });
-  const [profile] = useStorage('profile', { name: 'Ravi Kumar', phone: '+91 98765 43210' });
+  const defaultName = user?.isAnonymous ? 'Guest' : (user?.displayName || user?.email?.split('@')[0] || 'Customer');
+  const [profile, setProfile] = useStorage('profile', { name: defaultName, phone: user?.phoneNumber || '' });
+  const orders = allOrders.filter(o => o.userId === user?.uid);
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -277,6 +281,7 @@ function CustomerApp() {
     const deliveryFee = cartTotal >= settings.freeDeliveryAbove ? 0 : settings.deliveryFee;
     const order = {
       id: 'VG' + Date.now().toString().slice(-8),
+      userId: user?.uid,
       items: orderItems,
       total: cartTotal + deliveryFee,
       itemTotal: cartTotal,
@@ -290,7 +295,7 @@ function CustomerApp() {
       etaMinutes: settings.deliveryTime,
       assignedRider: null,
     };
-    setOrders([order, ...orders]);
+    setAllOrders([order, ...allOrders]);
     setActiveOrder(order);
     setCart({});
     setScreen('tracking');
@@ -938,6 +943,14 @@ function CustomerApp() {
         <div className="text-white font-black font-display">{settings.storeName} v1.0</div>
         <div className="text-white/60 text-xs mt-1">Made in {settings.city}, AP 🇮🇳</div>
       </div>
+      <div className="mx-4 mt-3 mb-8">
+        <button
+          onClick={() => signOut(auth)}
+          className="w-full py-3.5 rounded-2xl border-2 border-red-200 text-red-500 font-black text-sm flex items-center justify-center gap-2 active:bg-red-50"
+        >
+          <LogOut size={16} /> Sign Out
+        </button>
+      </div>
     </div>
   );
 
@@ -1009,12 +1022,13 @@ function CustomerApp() {
 // ===========================================================
 // ============ RIDER APP ============
 // ===========================================================
-function RiderApp() {
+function RiderApp({ user }) {
   const [screen, setScreen] = useState('home');
   const [orders, setOrders] = useStorage('orders', []);
+  const defaultRiderName = user?.displayName || user?.email?.split('@')[0] || 'Rider';
   const [riderProfile, setRiderProfile] = useStorage('rider', {
-    name: 'Suresh Reddy',
-    phone: '+91 99887 76655',
+    name: defaultRiderName,
+    phone: user?.phoneNumber || '+91 99887 76655',
     vehicle: 'TS09 EZ 4521',
     rating: 4.9,
     totalDeliveries: 247,
@@ -1407,6 +1421,14 @@ function RiderApp() {
             </button>
           ))}
         </div>
+        <div className="mx-4 mt-3 mb-8">
+          <button
+            onClick={() => signOut(auth)}
+            className="w-full py-3.5 rounded-2xl border-2 border-red-200 text-red-500 font-black text-sm flex items-center justify-center gap-2 active:bg-red-50"
+          >
+            <LogOut size={16} /> Sign Out
+          </button>
+        </div>
       </div>
     );
   };
@@ -1450,7 +1472,7 @@ function RiderApp() {
 // ===========================================================
 // ============ ADMIN APP ============
 // ===========================================================
-function AdminApp() {
+function AdminApp({ user }) {
   const [screen, setScreen] = useState('dashboard');
   const [products, setProducts] = useStorage('products', DEFAULT_PRODUCTS);
   const [categories, setCategories] = useStorage('categories', DEFAULT_CATEGORIES);
@@ -1474,12 +1496,17 @@ function AdminApp() {
           <div>
             <div className="text-white/70 text-xs font-bold">ADMIN DASHBOARD</div>
             <h1 className="text-white font-display font-black text-2xl mt-1">{settings.storeName}</h1>
-            <div className="text-white/70 text-xs">{settings.city}, {settings.state}</div>
+            <div className="text-white/70 text-xs">{user?.email || settings.city}</div>
           </div>
-          <button onClick={() => setSettings({ ...settings, isOpen: !settings.isOpen })} className="flex items-center gap-1.5 bg-white/10 backdrop-blur px-3 py-2 rounded-full">
-            <div className={`w-2 h-2 rounded-full ${settings.isOpen ? 'bg-emerald-400' : 'bg-red-400'}`} />
-            <span className="text-white text-xs font-bold">{settings.isOpen ? 'STORE OPEN' : 'CLOSED'}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setSettings({ ...settings, isOpen: !settings.isOpen })} className="flex items-center gap-1.5 bg-white/10 backdrop-blur px-3 py-2 rounded-full">
+              <div className={`w-2 h-2 rounded-full ${settings.isOpen ? 'bg-emerald-400' : 'bg-red-400'}`} />
+              <span className="text-white text-xs font-bold">{settings.isOpen ? 'OPEN' : 'CLOSED'}</span>
+            </button>
+            <button onClick={() => signOut(auth)} className="bg-white/10 backdrop-blur p-2 rounded-full">
+              <LogOut size={16} color="white" />
+            </button>
+          </div>
         </div>
       </div>
 
