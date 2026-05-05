@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ShoppingCart, Search, MapPin, Clock, Plus, Minus, Trash2, ChevronRight, Home, Package, User, Heart, Star, Zap, X, Check, CreditCard, Wallet, Banknote, ArrowLeft, Bell, Tag, Truck, Phone, Settings, Edit3, Save, AlertCircle, TrendingUp, IndianRupee, Box, Users, BarChart3, ToggleLeft, ToggleRight, Sparkles, Globe, LogOut } from 'lucide-react';
-import { auth, isConfigured } from './firebase';
+import { auth, db, isConfigured } from './firebase';
+import { signOut } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { RiderDeliveryMap, CustomerTrackingMap } from './LiveMap';
 
 const doSignOut = async () => {
   if (isConfigured && auth) {
-    const { signOut } = await import('firebase/auth');
     await signOut(auth);
   } else {
     window.location.reload();
@@ -2469,10 +2470,7 @@ function AdminApp({ user, userData, onSignOut }) {
       setRiderApplications(updated);
       // Also update the user's Firestore doc
       try {
-        const [firestoreMod] = await Promise.all([import('firebase/firestore')]);
-        const { doc, setDoc, getFirestore } = firestoreMod;
-        const { db: fdb } = await import('./firebase');
-        if (fdb) await setDoc(doc(fdb, 'users', rider.uid), { isApproved: true }, { merge: true });
+        if (db) await setDoc(doc(db, 'users', rider.uid), { isApproved: true }, { merge: true });
       } catch (e) {}
     };
 
@@ -2480,10 +2478,7 @@ function AdminApp({ user, userData, onSignOut }) {
       const updated = riderApplications.map(r => r.uid === rider.uid ? { ...r, isRejected: true, isApproved: false } : r);
       setRiderApplications(updated);
       try {
-        const [firestoreMod] = await Promise.all([import('firebase/firestore')]);
-        const { doc, setDoc } = firestoreMod;
-        const { db: fdb } = await import('./firebase');
-        if (fdb) await setDoc(doc(fdb, 'users', rider.uid), { isApproved: false }, { merge: true });
+        if (db) await setDoc(doc(db, 'users', rider.uid), { isApproved: false }, { merge: true });
       } catch (e) {}
     };
 

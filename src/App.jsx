@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db, isConfigured } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import VeguPlatform from './VeguPlatform';
 import AuthScreen, { RiderPendingScreen, SetupRequired } from './AuthScreen';
 
 const SHARED_KEYS = new Set(['products', 'categories', 'settings', 'banners', 'orders',
   'subscriptionPlans', 'riderApplications']);
 
-function setupFirestoreStorage(uid, fns) {
-  const { doc, getDoc, setDoc, deleteDoc } = fns;
+function setupFirestoreStorage(uid) {
   window.storage = {
     get: async (key) => {
       const ref = SHARED_KEYS.has(key)
@@ -61,41 +62,34 @@ export default function App() {
       return;
     }
 
-    let unsub = () => {};
-    (async () => {
-      const [authMod, firestoreMod] = await Promise.all([
-        import('firebase/auth'),
-        import('firebase/firestore'),
-      ]);
-      const fns = {
-        doc: firestoreMod.doc,
-        getDoc: firestoreMod.getDoc,
-        setDoc: firestoreMod.setDoc,
-        deleteDoc: firestoreMod.deleteDoc,
-      };
-
-      unsub = authMod.onAuthStateChanged(auth, async (firebaseUser) => {
-        if (firebaseUser) {
-          // Fetch role + profile from Firestore
-          const snap = await firestoreMod.getDoc(firestoreMod.doc(db, 'users', firebaseUser.uid));
+    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
           const data = snap.exists() ? snap.data() : { role: 'customer' };
-          setupFirestoreStorage(firebaseUser.uid, fns);
+          setupFirestoreStorage(firebaseUser.uid);
           setUser(firebaseUser);
           setUserRole(data.role || 'customer');
           setUserData(data);
-        } else {
-          setUser(null);
-          setUserRole(null);
-          setUserData(null);
+        } catch (e) {
+          // Firestore read failed — default to customer role
+          setupFirestoreStorage(firebaseUser.uid);
+          setUser(firebaseUser);
+          setUserRole('customer');
+          setUserData({ role: 'customer' });
         }
-        setReady(true);
-      });
-    })();
+      } else {
+        setUser(null);
+        setUserRole(null);
+        setUserData(null);
+      }
+      setReady(true);
+    });
+
     return () => unsub();
   }, []);
 
   const handleSignOut = async () => {
-    const { signOut } = await import('firebase/auth');
     await signOut(auth);
   };
 
@@ -103,7 +97,6 @@ export default function App() {
   if (!ready) return <Splash />;
   if (!user) return <AuthScreen />;
 
-  // Rider waiting for admin approval
   if (userRole === 'rider' && userData?.isApproved === false) {
     return <RiderPendingScreen onSignOut={handleSignOut} />;
   }
