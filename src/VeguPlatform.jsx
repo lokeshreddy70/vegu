@@ -6,7 +6,7 @@ import { RiderDeliveryMap, CustomerTrackingMap } from './LiveMap';
 const doSignOut = async () => {
   if (isConfigured && auth) {
     const { signOut } = await import('firebase/auth');
-    await doSignOut();
+    await signOut(auth);
   } else {
     window.location.reload();
   }
@@ -145,94 +145,55 @@ const BRAND = {
   ink: '#1A1A1A',
 };
 
-// ============ MAIN APP ROUTER ============
-function VeguPlatform({ user }) {
-  const [appMode, setAppMode] = useStorage('appMode', 'customer'); // 'customer' | 'rider' | 'admin'
+// ============ SUBSCRIPTION PLANS DEFAULT DATA ============
+const DEFAULT_SUBSCRIPTION_PLANS = [
+  { id: 'plus', name: 'Vegu Plus', price: 499, discountPercent: 5, freeDelivery: false, badge: '⭐ Popular', color: '#4DA167', benefits: ['5% off every order', 'Priority delivery', 'Exclusive member deals', 'Early sale access'], isActive: true },
+  { id: 'premium', name: 'Vegu Premium', price: 999, discountPercent: 10, freeDelivery: true, badge: '🔥 Best Value', color: '#FF6B35', benefits: ['10% off every order', 'Free delivery always', 'Priority support', 'Early sale access'], isActive: true },
+  { id: 'family', name: 'Vegu Family', price: 1499, discountPercent: 15, freeDelivery: true, badge: '👨‍👩‍👧 Family', color: '#C1272D', benefits: ['15% off every order', 'Free delivery always', 'Family size deals', 'Monthly hamper discount'], isActive: true },
+];
 
+// ============ MAIN APP ROUTER ============
+function VeguPlatform({ user, userRole, userData, onSignOut }) {
+  const GLOBAL_CSS = `
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@600;800;900&family=Hind:wght@400;500;600;700&display=swap');
+    body { -webkit-font-smoothing: antialiased; background: #f5f5f5; }
+    ::-webkit-scrollbar { display: none; }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .font-display { font-family: 'Fraunces', Georgia, serif; }
+    @keyframes pulse-scale { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+    @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    .shimmer { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); background-size: 200% 100%; animation: shimmer 2s infinite; }
+  `;
   return (
     <div className="max-w-md mx-auto bg-white min-h-screen relative" style={{ fontFamily: '"SF Pro Display", -apple-system, system-ui, sans-serif' }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@600;800;900&family=Hind:wght@400;500;600;700&display=swap');
-        body { -webkit-font-smoothing: antialiased; background: #f5f5f5; }
-        ::-webkit-scrollbar { display: none; }
-        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .font-display { font-family: 'Fraunces', Georgia, serif; }
-        @keyframes pulse-scale { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
-        @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-        .shimmer { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); background-size: 200% 100%; animation: shimmer 2s infinite; }
-      `}</style>
-
-      {/* Mode Switcher (top floating) */}
-      <ModeSwitcher appMode={appMode} setAppMode={setAppMode} />
-
-      {appMode === 'customer' && <CustomerApp user={user} />}
-      {appMode === 'rider' && <RiderApp user={user} />}
-      {appMode === 'admin' && <AdminApp user={user} />}
+      <style>{GLOBAL_CSS}</style>
+      {userRole === 'customer' && <CustomerApp user={user} userData={userData} onSignOut={onSignOut} />}
+      {userRole === 'rider'    && <RiderApp    user={user} userData={userData} onSignOut={onSignOut} />}
+      {userRole === 'admin'    && <AdminApp    user={user} userData={userData} onSignOut={onSignOut} />}
     </div>
   );
 }
 
-// ============ MODE SWITCHER ============
-const ModeSwitcher = ({ appMode, setAppMode }) => {
-  const [open, setOpen] = useState(false);
-  const modes = [
-    { id: 'customer', label: 'Customer App', icon: '🛒', desc: 'Shop groceries' },
-    { id: 'rider', label: 'Rider App', icon: '🛵', desc: 'Delivery partner' },
-    { id: 'admin', label: 'Admin Panel', icon: '⚙️', desc: 'Manage store' },
-  ];
-  const current = modes.find(m => m.id === appMode);
-
-  return (
-    <>
-      <button onClick={() => setOpen(true)} className="fixed top-3 right-3 z-50 bg-black/85 backdrop-blur-sm text-white px-2.5 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-lg">
-        <span>{current.icon}</span>
-        <span>SWITCH</span>
-      </button>
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)}>
-          <div className="bg-white w-full max-w-md rounded-t-3xl p-5 pb-8" onClick={e => e.stopPropagation()}>
-            <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
-            <h3 className="font-display text-xl font-black mb-1">Switch View</h3>
-            <p className="text-xs text-gray-500 mb-4">Preview the platform from any side</p>
-            <div className="space-y-2">
-              {modes.map(m => (
-                <button
-                  key={m.id}
-                  onClick={() => { setAppMode(m.id); setOpen(false); }}
-                  className={`w-full p-3 rounded-2xl border-2 flex items-center gap-3 transition ${appMode === m.id ? 'border-black bg-orange-50' : 'border-gray-200'}`}
-                >
-                  <div className="text-3xl">{m.icon}</div>
-                  <div className="flex-1 text-left">
-                    <div className="font-bold">{m.label}</div>
-                    <div className="text-xs text-gray-500">{m.desc}</div>
-                  </div>
-                  {appMode === m.id && <Check size={18} />}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-};
-
 // ===========================================================
 // ============ CUSTOMER APP ============
 // ===========================================================
-function CustomerApp({ user }) {
+function CustomerApp({ user, userData, onSignOut }) {
   const [screen, setScreen] = useState('splash');
   const [products] = useStorage('products', DEFAULT_PRODUCTS);
   const [categories] = useStorage('categories', DEFAULT_CATEGORIES);
   const [banners] = useStorage('banners', DEFAULT_BANNERS);
   const [settings] = useStorage('settings', DEFAULT_SETTINGS);
+  const [subscriptionPlans] = useStorage('subscriptionPlans', DEFAULT_SUBSCRIPTION_PLANS);
+  const [mySubscription, setMySubscription] = useStorage('mySubscription', null);
   const [cart, setCart] = useStorage('cart', {});
   const [allOrders, setAllOrders] = useStorage('orders', []);
   const [address, setAddress] = useStorage('address', { line: 'D.No 25-1-12, Trunk Road', area: 'Stonehousepet, Nellore', pin: '524002' });
-  const defaultName = user?.isAnonymous ? 'Guest' : (user?.displayName || user?.email?.split('@')[0] || 'Customer');
-  const [profile, setProfile] = useStorage('profile', { name: defaultName, phone: user?.phoneNumber || '' });
+  const defaultName = userData?.name || user?.displayName || user?.email?.split('@')[0] || 'Customer';
+  const [profile, setProfile] = useStorage('profile', { name: defaultName, phone: userData?.phone || '' });
   const orders = allOrders.filter(o => o.userId === user?.uid);
+  const activeSub = mySubscription || userData?.subscription;
+  const activePlan = subscriptionPlans.find(p => p.id === activeSub?.planId && activeSub?.isActive);
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -285,15 +246,21 @@ function CustomerApp({ user }) {
     return list;
   }, [activeCategory, searchQuery, activeProducts]);
 
-  const placeOrder = (paymentMethod) => {
+  const placeOrder = (paymentMethod, deliverySlot) => {
     const orderItems = Object.values(cart);
-    const deliveryFee = cartTotal >= settings.freeDeliveryAbove ? 0 : settings.deliveryFee;
+    const isScheduled = deliverySlot?.type === 'scheduled';
+    // Apply subscription discount
+    const discountPct = activePlan ? activePlan.discountPercent : 0;
+    const discountedTotal = Math.round(cartTotal * (1 - discountPct / 100));
+    const freeDeliveryThreshold = activePlan?.freeDelivery ? 0 : settings.freeDeliveryAbove;
+    const deliveryFee = (discountedTotal >= freeDeliveryThreshold || isScheduled) ? 0 : settings.deliveryFee;
     const order = {
       id: 'VG' + Date.now().toString().slice(-8),
       userId: user?.uid,
       items: orderItems,
-      total: cartTotal + deliveryFee,
+      total: discountedTotal + deliveryFee,
       itemTotal: cartTotal,
+      discount: cartTotal - discountedTotal,
       delivery: deliveryFee,
       payment: paymentMethod,
       address,
@@ -301,7 +268,10 @@ function CustomerApp({ user }) {
       customerPhone: profile.phone,
       status: 'placed',
       placedAt: new Date().toISOString(),
-      etaMinutes: settings.deliveryTime,
+      etaMinutes: isScheduled ? null : settings.deliveryTime,
+      deliveryType: deliverySlot?.type || 'quick',
+      deliverySlot: deliverySlot?.slot || null,
+      scheduledLabel: deliverySlot?.label || null,
       assignedRider: null,
     };
     setAllOrders([order, ...allOrders]);
@@ -704,59 +674,153 @@ function CustomerApp({ user }) {
 
   const CheckoutScreen = () => {
     const [paymentMethod, setPaymentMethod] = useState('upi');
-    const deliveryFee = cartTotal >= settings.freeDeliveryAbove ? 0 : settings.deliveryFee;
-    const grandTotal = cartTotal + deliveryFee;
+    const [deliveryType, setDeliveryType] = useState('quick');
+    const [selectedSlot, setSelectedSlot] = useState(null);
+
+    const now = new Date();
+    const todayLabel = now.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+    const tomorrowLabel = new Date(now.getTime() + 86400000).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+    const h = now.getHours();
+    const rawSlots = [
+      { id: 'morning',   label: 'Morning',   time: '9 AM – 12 PM', icon: '🌅', avail: h < 11 },
+      { id: 'afternoon', label: 'Afternoon', time: '12 – 4 PM',    icon: '☀️', avail: h < 15 },
+      { id: 'evening',   label: 'Evening',   time: '4 – 8 PM',     icon: '🌆', avail: h < 19 },
+      { id: 'night',     label: 'Night',     time: '8 – 10 PM',    icon: '🌙', avail: h < 21 },
+    ];
+    const slots = [
+      ...rawSlots.filter(s => s.avail).map(s => ({ ...s, id: `today_${s.id}`, day: todayLabel })),
+      ...rawSlots.map(s => ({ ...s, id: `tmrw_${s.id}`, day: tomorrowLabel })),
+    ];
+
+    const discountPct = activePlan ? activePlan.discountPercent : 0;
+    const discountedTotal = Math.round(cartTotal * (1 - discountPct / 100));
+    const freeAbove = activePlan?.freeDelivery ? 0 : settings.freeDeliveryAbove;
+    const deliveryFee = (deliveryType === 'scheduled' || discountedTotal >= freeAbove) ? 0 : settings.deliveryFee;
+    const grandTotal = discountedTotal + deliveryFee;
+
     const methods = [
       { id: 'upi', name: 'UPI', sub: 'PhonePe, GPay, Paytm', icon: <Wallet size={20} />, badge: 'INSTANT' },
       { id: 'card', name: 'Credit / Debit Card', sub: 'Visa, Mastercard, RuPay', icon: <CreditCard size={20} /> },
       { id: 'cod', name: 'Cash on Delivery', sub: 'Pay when you receive', icon: <Banknote size={20} /> },
     ];
+
+    const handlePlace = () => {
+      if (deliveryType === 'scheduled' && !selectedSlot) { alert('Please select a delivery slot.'); return; }
+      const slotObj = deliveryType === 'quick' ? { type: 'quick' }
+        : { type: 'scheduled', slot: selectedSlot.id, label: `${selectedSlot.day} ${selectedSlot.label} (${selectedSlot.time})` };
+      placeOrder(paymentMethod, slotObj);
+    };
+
     return (
       <div className="min-h-screen bg-gray-50 pb-32">
         <div className="sticky top-0 z-20 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
           <button onClick={() => setScreen('cart')}><ArrowLeft size={22} /></button>
           <div className="font-bold">Checkout</div>
         </div>
-        <div className="p-4">
-          <h3 className="font-black mb-3 font-display">Choose Payment Method</h3>
-          <div className="space-y-2">
-            {methods.map(m => (
-              <button key={m.id} onClick={() => setPaymentMethod(m.id)} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 transition ${paymentMethod === m.id ? 'bg-orange-50' : 'bg-white'}`} style={{ borderColor: paymentMethod === m.id ? BRAND.primary : '#e5e7eb' }}>
-                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: paymentMethod === m.id ? BRAND.primary : '#f3f4f6', color: paymentMethod === m.id ? 'white' : 'black' }}>{m.icon}</div>
-                <div className="flex-1 text-left">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold">{m.name}</span>
-                    {m.badge && <span className="text-[9px] font-black bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">{m.badge}</span>}
-                  </div>
-                  <div className="text-xs text-gray-500">{m.sub}</div>
-                </div>
-                <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: paymentMethod === m.id ? BRAND.primary : '#d1d5db', background: paymentMethod === m.id ? BRAND.primary : 'transparent' }}>
-                  {paymentMethod === m.id && <Check size={12} color="white" />}
-                </div>
-              </button>
-            ))}
-          </div>
-          {paymentMethod === 'upi' && (
-            <div className="mt-3 bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-900">
-              💳 Pay to: <span className="font-bold">{settings.upiId}</span>
+
+        <div className="p-4 space-y-4">
+          {/* Active subscription banner */}
+          {activePlan && (
+            <div className="rounded-2xl p-3 flex items-center gap-3" style={{ background: activePlan.color + '18', border: `1.5px solid ${activePlan.color}30` }}>
+              <div className="text-2xl">🌟</div>
+              <div className="flex-1">
+                <div className="font-black text-sm" style={{ color: activePlan.color }}>{activePlan.name} Active</div>
+                <div className="text-xs text-gray-500">{activePlan.discountPercent}% off applied • {activePlan.freeDelivery ? 'Free delivery' : ''}</div>
+              </div>
+              <div className="font-black text-sm" style={{ color: activePlan.color }}>-₹{cartTotal - discountedTotal}</div>
             </div>
           )}
-          <div className="mt-5 bg-white rounded-2xl p-4">
+
+          {/* Delivery time selection */}
+          <div className="bg-white rounded-2xl p-4">
+            <h3 className="font-black mb-3 font-display">Delivery Time</h3>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <button onClick={() => { setDeliveryType('quick'); setSelectedSlot(null); }}
+                className="p-3 rounded-xl border-2 text-left transition"
+                style={{ borderColor: deliveryType === 'quick' ? BRAND.primary : '#e5e7eb', background: deliveryType === 'quick' ? '#fff3ee' : '#fff' }}>
+                <div className="text-xl mb-1">⚡</div>
+                <div className="font-black text-sm" style={{ color: deliveryType === 'quick' ? BRAND.primary : BRAND.ink }}>Quick</div>
+                <div className="text-xs text-gray-500">{settings.deliveryTime} mins</div>
+              </button>
+              <button onClick={() => setDeliveryType('scheduled')}
+                className="p-3 rounded-xl border-2 text-left transition"
+                style={{ borderColor: deliveryType === 'scheduled' ? BRAND.accent : '#e5e7eb', background: deliveryType === 'scheduled' ? '#f0fdf4' : '#fff' }}>
+                <div className="text-xl mb-1">📅</div>
+                <div className="font-black text-sm" style={{ color: deliveryType === 'scheduled' ? BRAND.accent : BRAND.ink }}>Schedule</div>
+                <div className="text-xs text-gray-500">Free delivery</div>
+              </button>
+            </div>
+            {deliveryType === 'scheduled' && (
+              <div className="space-y-2">
+                <div className="text-xs font-bold text-gray-500 uppercase">Select a slot</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {slots.map(s => (
+                    <button key={s.id} onClick={() => setSelectedSlot(s)}
+                      className="p-2.5 rounded-xl border-2 text-left transition"
+                      style={{ borderColor: selectedSlot?.id === s.id ? BRAND.accent : '#e5e7eb', background: selectedSlot?.id === s.id ? '#f0fdf4' : '#f9fafb' }}>
+                      <div className="text-base mb-0.5">{s.icon}</div>
+                      <div className="font-black text-xs" style={{ color: selectedSlot?.id === s.id ? BRAND.accent : BRAND.ink }}>{s.label}</div>
+                      <div className="text-[10px] text-gray-400">{s.day}</div>
+                      <div className="text-[10px] text-gray-500">{s.time}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Payment method */}
+          <div className="bg-white rounded-2xl p-4">
+            <h3 className="font-black mb-3 font-display">Payment Method</h3>
+            <div className="space-y-2">
+              {methods.map(m => (
+                <button key={m.id} onClick={() => setPaymentMethod(m.id)}
+                  className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 transition ${paymentMethod === m.id ? 'bg-orange-50' : 'bg-white'}`}
+                  style={{ borderColor: paymentMethod === m.id ? BRAND.primary : '#e5e7eb' }}>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center"
+                    style={{ background: paymentMethod === m.id ? BRAND.primary : '#f3f4f6', color: paymentMethod === m.id ? 'white' : 'black' }}>
+                    {m.icon}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold">{m.name}</span>
+                      {m.badge && <span className="text-[9px] font-black bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">{m.badge}</span>}
+                    </div>
+                    <div className="text-xs text-gray-500">{m.sub}</div>
+                  </div>
+                  <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center"
+                    style={{ borderColor: paymentMethod === m.id ? BRAND.primary : '#d1d5db', background: paymentMethod === m.id ? BRAND.primary : 'transparent' }}>
+                    {paymentMethod === m.id && <Check size={12} color="white" />}
+                  </div>
+                </button>
+              ))}
+            </div>
+            {paymentMethod === 'upi' && (
+              <div className="mt-3 bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-900">
+                💳 Pay to: <span className="font-bold">{settings.upiId}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Order summary */}
+          <div className="bg-white rounded-2xl p-4">
             <h3 className="font-black mb-3">Order Summary</h3>
             <div className="space-y-1.5 text-sm">
               <div className="flex justify-between text-gray-600"><span>Items ({cartCount})</span><span>₹{cartTotal}</span></div>
+              {discountPct > 0 && <div className="flex justify-between text-emerald-600 font-bold"><span>{activePlan?.name} ({discountPct}% off)</span><span>-₹{cartTotal - discountedTotal}</span></div>}
               <div className="flex justify-between text-gray-600">
-                <span>Delivery</span>
+                <span>Delivery {deliveryType === 'scheduled' ? '(Scheduled)' : ''}</span>
                 {deliveryFee === 0 ? <span className="text-emerald-600 font-bold">FREE</span> : <span>₹{deliveryFee}</span>}
               </div>
               <div className="border-t border-dashed pt-2 mt-2 flex justify-between font-black"><span>To Pay</span><span>₹{grandTotal}</span></div>
             </div>
           </div>
         </div>
+
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 max-w-md mx-auto">
-          <button onClick={() => placeOrder(paymentMethod)} className="w-full text-white font-black py-4 rounded-xl active:scale-[0.98] transition flex items-center justify-center gap-2" style={{ background: BRAND.ink }}>
+          <button onClick={handlePlace} className="w-full text-white font-black py-4 rounded-xl active:scale-[0.98] transition flex items-center justify-center gap-2" style={{ background: BRAND.ink }}>
             <Zap size={18} fill="white" />
-            Place Order • ₹{grandTotal}
+            {deliveryType === 'scheduled' && selectedSlot ? `Schedule for ${selectedSlot.label}` : `Place Order`} • ₹{grandTotal}
           </button>
         </div>
       </div>
@@ -939,6 +1003,16 @@ function CustomerApp({ user }) {
           <div className="p-3"><div className="font-black text-xl">⭐ 4.8</div><div className="text-xs text-gray-500">Rating</div></div>
         </div>
       </div>
+      {/* Subscription Card */}
+      <button onClick={() => setScreen('subscription')} className="mx-4 mt-4 w-full rounded-2xl p-4 flex items-center gap-3 text-left active:scale-[0.98] transition" style={{ background: activePlan ? activePlan.color : BRAND.ink }}>
+        <div className="text-3xl">{activePlan ? '🌟' : '⭐'}</div>
+        <div className="flex-1">
+          <div className="font-black text-white text-sm">{activePlan ? `${activePlan.name} Active` : 'Get Vegu Plus'}</div>
+          <div className="text-xs text-white/75">{activePlan ? `${activePlan.discountPercent}% off every order${activePlan.freeDelivery ? ' + free delivery' : ''}` : 'Save on every order with a subscription'}</div>
+        </div>
+        <ChevronRight size={18} color="white" />
+      </button>
+
       <div className="mx-4 mt-4 bg-white rounded-2xl divide-y divide-gray-100">
         {[
           { icon: <Package size={18} />, label: 'My Orders', action: () => setScreen('orders') },
@@ -970,6 +1044,88 @@ function CustomerApp({ user }) {
     </div>
   );
 
+  const SubscriptionScreen = () => {
+    const [confirming, setConfirming] = useState(null);
+    const activePlans = subscriptionPlans.filter(p => p.isActive);
+    const handleSubscribe = (plan) => {
+      setMySubscription({ planId: plan.id, isActive: true, startDate: new Date().toISOString(), planName: plan.name });
+      setConfirming(null);
+      setScreen('profile');
+    };
+    const handleCancel = () => {
+      setMySubscription(null);
+      setScreen('profile');
+    };
+    return (
+      <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="sticky top-0 bg-white z-20 border-b border-gray-100 px-4 py-3 flex items-center gap-3">
+          <button onClick={() => setScreen('profile')}><ArrowLeft size={22} /></button>
+          <div className="font-bold flex-1">Vegu Subscription</div>
+        </div>
+
+        {activePlan && (
+          <div className="mx-4 mt-4 rounded-2xl p-4" style={{ background: activePlan.color + '18', border: `1.5px solid ${activePlan.color}40` }}>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="text-3xl">🌟</div>
+              <div>
+                <div className="font-black" style={{ color: activePlan.color }}>{activePlan.name} — Active</div>
+                <div className="text-xs text-gray-500">Since {new Date(activeSub?.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+              </div>
+            </div>
+            <button onClick={handleCancel} className="text-xs text-red-500 font-bold border border-red-200 px-3 py-1.5 rounded-lg">Cancel Subscription</button>
+          </div>
+        )}
+
+        <div className="mx-4 mt-4 space-y-3">
+          {activePlans.map(plan => {
+            const isCurrent = activePlan?.id === plan.id;
+            return (
+              <div key={plan.id} className="bg-white rounded-2xl overflow-hidden border-2" style={{ borderColor: isCurrent ? plan.color : '#f3f4f6' }}>
+                <div className="p-4" style={{ background: plan.color }}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-white font-black text-lg font-display">{plan.name}</div>
+                      <div className="text-white/80 text-xs">{plan.badge}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-white font-black text-2xl">₹{plan.price}</div>
+                      <div className="text-white/70 text-xs">/month</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="space-y-2 mb-4">
+                    {plan.benefits.map((b, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        <Check size={14} style={{ color: plan.color }} className="flex-shrink-0" />
+                        <span>{b}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {isCurrent ? (
+                    <div className="w-full py-2.5 rounded-xl text-center font-black text-sm" style={{ background: plan.color + '20', color: plan.color }}>Current Plan ✓</div>
+                  ) : confirming === plan.id ? (
+                    <div className="space-y-2">
+                      <div className="text-xs text-gray-500 text-center">Subscribe for ₹{plan.price}/month?</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button onClick={() => setConfirming(null)} className="py-2.5 rounded-xl border border-gray-200 text-sm font-bold">Cancel</button>
+                        <button onClick={() => handleSubscribe(plan)} className="py-2.5 rounded-xl text-white font-black text-sm" style={{ background: plan.color }}>Confirm</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirming(plan.id)} className="w-full py-2.5 rounded-xl text-white font-black text-sm active:scale-[0.98] transition" style={{ background: plan.color }}>
+                      Subscribe Now
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   const BottomNav = () => {
     const items = [
       { id: 'home', icon: Home, label: 'Home' },
@@ -977,7 +1133,7 @@ function CustomerApp({ user }) {
       { id: 'cart', icon: ShoppingCart, label: 'Cart', badge: cartCount },
       { id: 'profile', icon: User, label: 'Profile' },
     ];
-    const hideOn = ['splash', 'product', 'checkout', 'tracking', 'address', 'search'];
+    const hideOn = ['splash', 'product', 'checkout', 'tracking', 'address', 'search', 'subscription'];
     if (hideOn.includes(screen)) return null;
     return (
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 max-w-md mx-auto z-30">
@@ -1029,6 +1185,7 @@ function CustomerApp({ user }) {
       {screen === 'orders' && <OrdersScreen />}
       {screen === 'address' && <AddressScreen />}
       {screen === 'profile' && <ProfileScreen />}
+      {screen === 'subscription' && <SubscriptionScreen />}
       <FloatingCart />
       <BottomNav />
     </>
@@ -1038,14 +1195,14 @@ function CustomerApp({ user }) {
 // ===========================================================
 // ============ RIDER APP ============
 // ===========================================================
-function RiderApp({ user }) {
+function RiderApp({ user, userData, onSignOut }) {
   const [screen, setScreen] = useState('home');
   const [orders, setOrders] = useStorage('orders', []);
-  const defaultRiderName = user?.displayName || user?.email?.split('@')[0] || 'Rider';
+  const defaultRiderName = userData?.name || user?.displayName || user?.email?.split('@')[0] || 'Rider';
   const [riderProfile, setRiderProfile] = useStorage('rider', {
     name: defaultRiderName,
-    phone: user?.phoneNumber || '+91 99887 76655',
-    vehicle: 'TS09 EZ 4521',
+    phone: userData?.phone || user?.phoneNumber || '+91 99887 76655',
+    vehicle: userData?.vehicleNumber || userData?.vehicleType || 'TS09 EZ 4521',
     rating: 4.9,
     totalDeliveries: 247,
     todayEarnings: 0,
@@ -1481,16 +1638,19 @@ function RiderApp({ user }) {
 // ===========================================================
 // ============ ADMIN APP ============
 // ===========================================================
-function AdminApp({ user }) {
+function AdminApp({ user, userData, onSignOut }) {
   const [screen, setScreen] = useState('dashboard');
   const [products, setProducts] = useStorage('products', DEFAULT_PRODUCTS);
   const [categories, setCategories] = useStorage('categories', DEFAULT_CATEGORIES);
   const [banners, setBanners] = useStorage('banners', DEFAULT_BANNERS);
   const [settings, setSettings] = useStorage('settings', DEFAULT_SETTINGS);
   const [orders, setOrders] = useStorage('orders', []);
+  const [subscriptionPlans, setSubscriptionPlans] = useStorage('subscriptionPlans', DEFAULT_SUBSCRIPTION_PLANS);
+  const [riderApplications, setRiderApplications] = useStorage('riderApplications', []);
   const [editingProduct, setEditingProduct] = useState(null);
   const [editingBanner, setEditingBanner] = useState(null);
   const [editingCategory, setEditingCategory] = useState(null);
+  const [editingPlan, setEditingPlan] = useState(null);
 
   const todayOrders = orders.filter(o => new Date(o.placedAt).toDateString() === new Date().toDateString());
   const todayRevenue = todayOrders.reduce((s, o) => s + o.total, 0);
@@ -1550,8 +1710,8 @@ function AdminApp({ user }) {
           {[
             { id: 'products', icon: Box, label: 'Products', color: BRAND.primary },
             { id: 'orders', icon: Package, label: 'Orders', color: BRAND.accent },
-            { id: 'banners', icon: Sparkles, label: 'Banners', color: '#8B5CF6' },
-            { id: 'categories', icon: Tag, label: 'Categories', color: '#EC4899' },
+            { id: 'riders', icon: Users, label: 'Riders', color: '#8B5CF6' },
+            { id: 'plans', icon: Sparkles, label: 'Plans', color: '#EC4899' },
             { id: 'analytics', icon: BarChart3, label: 'Analytics', color: '#3B82F6' },
             { id: 'settings', icon: Settings, label: 'Settings', color: BRAND.ink },
           ].map(a => {
@@ -2204,13 +2364,198 @@ function AdminApp({ user }) {
     );
   };
 
+  // ==== PLANS MANAGEMENT ====
+  const PlansScreen = () => {
+    const [editForm, setEditForm] = useState(null);
+
+    const addPlan = () => {
+      const newPlan = { id: 'plan_' + Date.now(), name: 'New Plan', price: 299, discountPercent: 5, freeDelivery: false, badge: '🆕 New', color: '#4DA167', benefits: ['5% off every order'], isActive: true };
+      setSubscriptionPlans([...subscriptionPlans, newPlan]);
+      setEditForm(newPlan);
+    };
+
+    const savePlan = (plan) => {
+      setSubscriptionPlans(subscriptionPlans.map(p => p.id === plan.id ? plan : p));
+      setEditForm(null);
+    };
+
+    const deletePlan = (planId) => {
+      if (confirm('Delete this plan?')) setSubscriptionPlans(subscriptionPlans.filter(p => p.id !== planId));
+    };
+
+    if (editForm) {
+      return (
+        <div className="min-h-screen bg-gray-50 pb-32">
+          <div className="sticky top-0 bg-white z-20 border-b border-gray-100 px-4 py-3 flex items-center gap-3">
+            <button onClick={() => setEditForm(null)}><ArrowLeft size={22} /></button>
+            <div className="font-bold flex-1">Edit Plan</div>
+            <button onClick={() => deletePlan(editForm.id)} className="text-red-500"><Trash2 size={18} /></button>
+          </div>
+          <div className="p-4 space-y-3">
+            <div className="bg-white rounded-2xl p-4 space-y-3">
+              <div><label className="text-xs font-bold text-gray-500">Plan Name</label><input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full mt-1 px-3 py-2 border-2 border-gray-200 rounded-lg outline-none focus:border-orange-500" /></div>
+              <div><label className="text-xs font-bold text-gray-500">Badge Text</label><input value={editForm.badge} onChange={e => setEditForm({...editForm, badge: e.target.value})} className="w-full mt-1 px-3 py-2 border-2 border-gray-200 rounded-lg outline-none focus:border-orange-500" /></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><label className="text-xs font-bold text-gray-500">Price (₹/month)</label><input type="number" value={editForm.price} onChange={e => setEditForm({...editForm, price: parseInt(e.target.value) || 0})} className="w-full mt-1 px-3 py-2 border-2 border-gray-200 rounded-lg outline-none focus:border-orange-500" /></div>
+                <div><label className="text-xs font-bold text-gray-500">Discount %</label><input type="number" value={editForm.discountPercent} onChange={e => setEditForm({...editForm, discountPercent: parseInt(e.target.value) || 0})} className="w-full mt-1 px-3 py-2 border-2 border-gray-200 rounded-lg outline-none focus:border-orange-500" /></div>
+              </div>
+              <div><label className="text-xs font-bold text-gray-500">Color (hex)</label><input value={editForm.color} onChange={e => setEditForm({...editForm, color: e.target.value})} className="w-full mt-1 px-3 py-2 border-2 border-gray-200 rounded-lg outline-none focus:border-orange-500" /></div>
+              <div><label className="text-xs font-bold text-gray-500">Benefits (one per line)</label><textarea rows={4} value={editForm.benefits.join('\n')} onChange={e => setEditForm({...editForm, benefits: e.target.value.split('\n').filter(Boolean)})} className="w-full mt-1 px-3 py-2 border-2 border-gray-200 rounded-lg outline-none focus:border-orange-500 text-sm" /></div>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-sm">Free Delivery</span>
+                <button onClick={() => setEditForm({...editForm, freeDelivery: !editForm.freeDelivery})}>
+                  {editForm.freeDelivery ? <ToggleRight size={32} style={{ color: BRAND.accent }} /> : <ToggleLeft size={32} className="text-gray-400" />}
+                </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-sm">Active (visible to customers)</span>
+                <button onClick={() => setEditForm({...editForm, isActive: !editForm.isActive})}>
+                  {editForm.isActive ? <ToggleRight size={32} style={{ color: BRAND.accent }} /> : <ToggleLeft size={32} className="text-gray-400" />}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 max-w-md mx-auto">
+            <button onClick={() => savePlan(editForm)} className="w-full text-white font-black py-3.5 rounded-xl flex items-center justify-center gap-2" style={{ background: BRAND.primary }}>
+              <Save size={18} /> Save Plan
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="sticky top-0 bg-white z-20 border-b border-gray-100 px-4 py-3 flex items-center gap-3">
+          <button onClick={() => setScreen('dashboard')}><ArrowLeft size={22} /></button>
+          <div className="font-bold flex-1">Subscription Plans</div>
+          <button onClick={addPlan} className="text-white px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1" style={{ background: BRAND.primary }}><Plus size={14} /> ADD</button>
+        </div>
+        <div className="p-4 space-y-3">
+          {subscriptionPlans.length === 0 ? (
+            <div className="bg-white rounded-2xl p-8 text-center text-gray-500">No plans yet. Create your first plan!</div>
+          ) : subscriptionPlans.map(plan => (
+            <div key={plan.id} className="bg-white rounded-2xl overflow-hidden border border-gray-100">
+              <div className="px-4 py-3 flex items-center gap-3" style={{ background: plan.color }}>
+                <div className="flex-1">
+                  <div className="text-white font-black">{plan.name}</div>
+                  <div className="text-white/75 text-xs">{plan.badge}</div>
+                </div>
+                <div className="text-white font-black text-lg">₹{plan.price}/mo</div>
+              </div>
+              <div className="px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <span className="font-bold" style={{ color: plan.color }}>{plan.discountPercent}% OFF</span>
+                  {plan.freeDelivery && <span className="text-emerald-600 font-bold">Free Delivery</span>}
+                  {!plan.isActive && <span className="text-gray-400 text-xs font-bold bg-gray-100 px-2 py-0.5 rounded">INACTIVE</span>}
+                </div>
+                <button onClick={() => setEditForm(plan)} className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center"><Edit3 size={14} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // ==== RIDERS MANAGEMENT ====
+  const RidersScreen = () => {
+    const pendingRiders = riderApplications.filter(r => !r.isApproved && !r.isRejected);
+    const approvedRiders = riderApplications.filter(r => r.isApproved);
+    const rejectedRiders = riderApplications.filter(r => r.isRejected);
+
+    const approveRider = async (rider) => {
+      const updated = riderApplications.map(r => r.uid === rider.uid ? { ...r, isApproved: true, isRejected: false } : r);
+      setRiderApplications(updated);
+      // Also update the user's Firestore doc
+      try {
+        const [firestoreMod] = await Promise.all([import('firebase/firestore')]);
+        const { doc, setDoc, getFirestore } = firestoreMod;
+        const { db: fdb } = await import('./firebase');
+        if (fdb) await setDoc(doc(fdb, 'users', rider.uid), { isApproved: true }, { merge: true });
+      } catch (e) {}
+    };
+
+    const rejectRider = async (rider) => {
+      const updated = riderApplications.map(r => r.uid === rider.uid ? { ...r, isRejected: true, isApproved: false } : r);
+      setRiderApplications(updated);
+      try {
+        const [firestoreMod] = await Promise.all([import('firebase/firestore')]);
+        const { doc, setDoc } = firestoreMod;
+        const { db: fdb } = await import('./firebase');
+        if (fdb) await setDoc(doc(fdb, 'users', rider.uid), { isApproved: false }, { merge: true });
+      } catch (e) {}
+    };
+
+    const RiderCard = ({ rider, showActions }) => (
+      <div className="bg-white rounded-2xl p-4 border border-gray-100">
+        <div className="flex items-start gap-3">
+          <div className="w-12 h-12 rounded-full flex items-center justify-center font-black text-lg text-white flex-shrink-0" style={{ background: BRAND.primary }}>{rider.name?.[0] || '?'}</div>
+          <div className="flex-1 min-w-0">
+            <div className="font-black">{rider.name || 'Unknown'}</div>
+            <div className="text-xs text-gray-500">{rider.email}</div>
+            <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-2">
+              <span>📞 {rider.phone || '—'}</span>
+              <span>🛵 {rider.vehicleType || '—'}</span>
+              <span>🔢 {rider.vehicleNumber || '—'}</span>
+            </div>
+            <div className="text-[10px] text-gray-400 mt-1">{rider.appliedAt ? new Date(rider.appliedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : ''}</div>
+          </div>
+        </div>
+        {showActions && (
+          <div className="flex gap-2 mt-3">
+            <button onClick={() => rejectRider(rider)} className="flex-1 py-2 rounded-xl border-2 border-red-200 text-red-600 font-black text-sm">Reject</button>
+            <button onClick={() => approveRider(rider)} className="flex-1 py-2 rounded-xl text-white font-black text-sm" style={{ background: BRAND.accent }}>Approve ✓</button>
+          </div>
+        )}
+      </div>
+    );
+
+    return (
+      <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="sticky top-0 bg-white z-20 border-b border-gray-100 px-4 py-3 flex items-center gap-3">
+          <button onClick={() => setScreen('dashboard')}><ArrowLeft size={22} /></button>
+          <div className="font-bold flex-1">Delivery Riders</div>
+          {pendingRiders.length > 0 && <div className="text-xs font-black text-white bg-orange-500 w-5 h-5 rounded-full flex items-center justify-center">{pendingRiders.length}</div>}
+        </div>
+        <div className="p-4 space-y-4">
+          {pendingRiders.length > 0 && (
+            <div>
+              <div className="text-xs font-bold text-orange-600 uppercase mb-2">Pending Approval ({pendingRiders.length})</div>
+              <div className="space-y-2">{pendingRiders.map(r => <RiderCard key={r.uid} rider={r} showActions />)}</div>
+            </div>
+          )}
+          {approvedRiders.length > 0 && (
+            <div>
+              <div className="text-xs font-bold text-emerald-600 uppercase mb-2">Active Riders ({approvedRiders.length})</div>
+              <div className="space-y-2">{approvedRiders.map(r => <RiderCard key={r.uid} rider={r} showActions={false} />)}</div>
+            </div>
+          )}
+          {rejectedRiders.length > 0 && (
+            <div>
+              <div className="text-xs font-bold text-gray-400 uppercase mb-2">Rejected ({rejectedRiders.length})</div>
+              <div className="space-y-2">{rejectedRiders.map(r => <RiderCard key={r.uid} rider={r} showActions={false} />)}</div>
+            </div>
+          )}
+          {riderApplications.length === 0 && (
+            <div className="bg-white rounded-2xl p-8 text-center">
+              <div className="text-5xl mb-2">🛵</div>
+              <div className="font-black">No rider applications yet</div>
+              <div className="text-sm text-gray-500 mt-1">New applications will appear here</div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const AdminNav = () => {
     if (['product-edit', 'banner-edit', 'category-edit'].includes(screen)) return null;
     const items = [
       { id: 'dashboard', icon: Home, label: 'Home' },
       { id: 'orders', icon: Package, label: 'Orders' },
       { id: 'products', icon: Box, label: 'Products' },
-      { id: 'analytics', icon: BarChart3, label: 'Stats' },
+      { id: 'riders', icon: Users, label: 'Riders' },
       { id: 'settings', icon: Settings, label: 'Settings' },
     ];
     return (
@@ -2243,6 +2588,8 @@ function AdminApp({ user }) {
       {screen === 'category-edit' && <CategoryEditScreen />}
       {screen === 'analytics' && <AnalyticsScreen />}
       {screen === 'settings' && <SettingsScreen />}
+      {screen === 'plans' && <PlansScreen />}
+      {screen === 'riders' && <RidersScreen />}
       <AdminNav />
     </>
   );

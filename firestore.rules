@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: is the requesting user an admin?
+    function isAdmin() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Shared store data — products, categories, banners, settings, orders, plans, riderApplications
+    match /store/{docId} {
+      // Anyone authenticated can read
+      allow read: if request.auth != null;
+      // Only admins can write
+      allow write: if isAdmin();
+    }
+
+    // User profiles (role, isApproved, etc.)
+    match /users/{uid} {
+      // User can read their own doc; admins can read all
+      allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
+      // Users can create their own doc (signup); admins can update any
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null && (request.auth.uid == uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Per-user data (cart, orders, address, profile, subscription, etc.)
+    match /users/{uid}/data/{key} {
+      // Users can only access their own data
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      // Admins can read all user data (for support)
+      allow read: if isAdmin();
+    }
+  }
+}

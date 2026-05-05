@@ -1,36 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db, isConfigured } from './firebase';
 import VeguPlatform from './VeguPlatform';
-import AuthScreen from './AuthScreen';
+import AuthScreen, { RiderPendingScreen, SetupRequired } from './AuthScreen';
 
-// localStorage polyfill — used in demo mode (no Firebase configured)
-function setupLocalStorage() {
-  window.storage = {
-    get: async (key) => {
-      const value = localStorage.getItem(key);
-      if (value === null) throw new Error('Not found');
-      return { key, value };
-    },
-    set: async (key, value) => {
-      localStorage.setItem(key, value);
-      return { key, value };
-    },
-    delete: async (key) => {
-      localStorage.removeItem(key);
-      return { key, deleted: true };
-    },
-    list: async (prefix = '') => {
-      const keys = Object.keys(localStorage).filter(k => k.startsWith(prefix));
-      return { keys, prefix };
-    },
-  };
-}
+const SHARED_KEYS = new Set(['products', 'categories', 'settings', 'banners', 'orders',
+  'subscriptionPlans', 'riderApplications']);
 
-// Firestore-backed storage — used when Firebase is configured
-const SHARED_KEYS = new Set(['products', 'categories', 'settings', 'banners', 'orders']);
-
-function setupFirestoreStorage(uid, firestoreFns) {
-  const { doc, getDoc, setDoc, deleteDoc } = firestoreFns;
+function setupFirestoreStorage(uid, fns) {
+  const { doc, getDoc, setDoc, deleteDoc } = fns;
   window.storage = {
     get: async (key) => {
       const ref = SHARED_KEYS.has(key)
@@ -58,14 +35,6 @@ function setupFirestoreStorage(uid, firestoreFns) {
   };
 }
 
-const DEMO_USER = {
-  uid: 'demo-local',
-  isAnonymous: true,
-  displayName: 'Guest',
-  email: null,
-  phoneNumber: null,
-};
-
 const Splash = () => (
   <div style={{
     minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -82,45 +51,62 @@ const Splash = () => (
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (!isConfigured) {
-      // Demo mode: localStorage + no login required
-      setupLocalStorage();
-      setUser(DEMO_USER);
       setReady(true);
       return;
     }
 
-    // Firebase mode: load auth + firestore lazily
-    let unsubscribe = () => {};
+    let unsub = () => {};
     (async () => {
       const [authMod, firestoreMod] = await Promise.all([
         import('firebase/auth'),
         import('firebase/firestore'),
       ]);
-      const firestoreFns = {
+      const fns = {
         doc: firestoreMod.doc,
         getDoc: firestoreMod.getDoc,
         setDoc: firestoreMod.setDoc,
         deleteDoc: firestoreMod.deleteDoc,
       };
-      unsubscribe = authMod.onAuthStateChanged(auth, (firebaseUser) => {
+
+      unsub = authMod.onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
-          setupFirestoreStorage(firebaseUser.uid, firestoreFns);
+          // Fetch role + profile from Firestore
+          const snap = await firestoreMod.getDoc(firestoreMod.doc(db, 'users', firebaseUser.uid));
+          const data = snap.exists() ? snap.data() : { role: 'customer' };
+          setupFirestoreStorage(firebaseUser.uid, fns);
           setUser(firebaseUser);
+          setUserRole(data.role || 'customer');
+          setUserData(data);
         } else {
           setUser(null);
+          setUserRole(null);
+          setUserData(null);
         }
         setReady(true);
       });
     })();
-
-    return () => unsubscribe();
+    return () => unsub();
   }, []);
 
+  const handleSignOut = async () => {
+    const { signOut } = await import('firebase/auth');
+    await signOut(auth);
+  };
+
+  if (!isConfigured) return <SetupRequired />;
   if (!ready) return <Splash />;
   if (!user) return <AuthScreen />;
-  return <VeguPlatform user={user} />;
+
+  // Rider waiting for admin approval
+  if (userRole === 'rider' && userData?.isApproved === false) {
+    return <RiderPendingScreen onSignOut={handleSignOut} />;
+  }
+
+  return <VeguPlatform user={user} userRole={userRole} userData={userData} onSignOut={handleSignOut} />;
 }
