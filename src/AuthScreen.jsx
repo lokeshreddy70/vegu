@@ -3,13 +3,19 @@ import { auth, db, isConfigured } from './firebase';
 
 const BRAND = { primary: '#FF6B35', red: '#C1272D', accent: '#4DA167', ink: '#1A1A1A' };
 
-const cleanError = (msg) =>
-  msg.replace('Firebase: ', '')
-    .replace('Error (auth/invalid-credential).', 'Wrong email or password.')
-    .replace('Error (auth/email-already-in-use).', 'Account already exists. Please login.')
-    .replace('Error (auth/weak-password).', 'Password must be at least 6 characters.')
-    .replace('Error (auth/invalid-email).', 'Invalid email address.')
-    .replace(/\(auth\/.*?\)\.?/g, '').trim();
+const cleanError = (msg = '') => {
+  if (msg.includes('auth/operation-not-allowed'))  return 'Email sign-in is not enabled. Contact admin.';
+  if (msg.includes('auth/email-already-in-use'))   return 'Account already exists — please login instead.';
+  if (msg.includes('auth/invalid-credential'))     return 'Wrong email or password.';
+  if (msg.includes('auth/invalid-email'))          return 'Invalid email address.';
+  if (msg.includes('auth/weak-password'))          return 'Password must be at least 6 characters.';
+  if (msg.includes('auth/user-not-found'))         return 'No account found with this email.';
+  if (msg.includes('auth/wrong-password'))         return 'Wrong password. Try again.';
+  if (msg.includes('auth/too-many-requests'))      return 'Too many attempts. Try again later.';
+  if (msg.includes('auth/network-request-failed')) return 'Network error. Check your connection.';
+  if (msg.includes('permission-denied'))           return 'Database permission denied. Contact admin.';
+  return msg.replace('Firebase: ', '').replace(/\s*\(auth\/[^)]+\)\.?/g, '').trim() || 'Something went wrong. Try again.';
+};
 
 // ─── Step 1: Role Picker ───────────────────────────────────────────────────
 const RolePicker = ({ onSelect }) => (
