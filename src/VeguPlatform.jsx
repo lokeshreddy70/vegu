@@ -181,7 +181,7 @@ function VeguPlatform({ user, userRole, userData, onSignOut }) {
 // ===========================================================
 function CustomerApp({ user, userData, onSignOut }) {
   const [screen, setScreen] = useState('splash');
-  const [products] = useStorage('products', DEFAULT_PRODUCTS);
+  const [products, setProducts] = useStorage('products', DEFAULT_PRODUCTS);
   const [categories] = useStorage('categories', DEFAULT_CATEGORIES);
   const [banners] = useStorage('banners', DEFAULT_BANNERS);
   const [settings] = useStorage('settings', DEFAULT_SETTINGS);
@@ -190,8 +190,17 @@ function CustomerApp({ user, userData, onSignOut }) {
   const [cart, setCart] = useStorage('cart', {});
   const [allOrders, setAllOrders] = useStorage('orders', []);
   const [address, setAddress] = useStorage('address', { line: 'D.No 25-1-12, Trunk Road', area: 'Stonehousepet, Nellore', pin: '524002' });
+  const [favorites, setFavorites] = useStorage('favorites', []);
+  const [toast, setToast] = useState(null);
+  // Extract real phone: stored as '+91NNNN' in userData, or decode from internal email
+  const realPhone = userData?.phone || (user?.email?.startsWith('user_') ? '+91 ' + user.email.replace('user_', '').replace('@vegu.app', '').replace(/(\d{5})(\d{5})/, '$1 $2') : '');
   const defaultName = userData?.name || user?.displayName || user?.email?.split('@')[0] || 'Customer';
-  const [profile, setProfile] = useStorage('profile', { name: defaultName, phone: userData?.phone || '' });
+  const [profile, setProfile] = useStorage('profile', { name: defaultName, phone: realPhone });
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 2800);
+  };
   const orders = allOrders.filter(o => o.userId === user?.uid);
   const activeSub = mySubscription || userData?.subscription;
   const activePlan = subscriptionPlans.find(p => p.id === activeSub?.planId && activeSub?.isActive);
@@ -433,18 +442,22 @@ function CustomerApp({ user, userData, onSignOut }) {
   const ProductCard = ({ product, cart, onAdd, onRemove, onClick, lang }) => {
     const inCart = cart[product.id];
     const discount = Math.round(((product.mrp - product.price) / product.mrp) * 100);
+    const isOutOfStock = product.stock <= 0;
+    const isLowStock = product.stock > 0 && product.stock <= 10;
     return (
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-        <div onClick={onClick} className="relative aspect-square bg-gradient-to-br from-orange-50 to-yellow-50 flex items-center justify-center cursor-pointer">
+      <div className={`bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm ${isOutOfStock ? 'opacity-70' : ''}`}>
+        <div onClick={isOutOfStock ? undefined : onClick} className={`relative aspect-square bg-gradient-to-br from-orange-50 to-yellow-50 flex items-center justify-center ${isOutOfStock ? '' : 'cursor-pointer'}`}>
           <span className="text-6xl">{product.emoji}</span>
-          {discount > 0 && <div className="absolute top-1.5 left-1.5 bg-emerald-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded">{discount}% OFF</div>}
-          <div className="absolute top-1.5 right-1.5 bg-white/90 backdrop-blur-sm rounded-full px-1.5 py-0.5 flex items-center gap-0.5">
+          {isOutOfStock && <div className="absolute inset-0 bg-white/60 flex items-center justify-center"><span className="bg-gray-700 text-white text-[10px] font-black px-2 py-1 rounded-full">OUT OF STOCK</span></div>}
+          {!isOutOfStock && discount > 0 && <div className="absolute top-1.5 left-1.5 bg-emerald-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded">{discount}% OFF</div>}
+          {!isOutOfStock && isLowStock && <div className="absolute bottom-1.5 left-1.5 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded">Only {product.stock} left</div>}
+          {!isOutOfStock && <div className="absolute top-1.5 right-1.5 bg-white/90 backdrop-blur-sm rounded-full px-1.5 py-0.5 flex items-center gap-0.5">
             <Clock size={9} className="text-gray-700" />
-            <span className="text-[9px] font-bold text-gray-800">12 min</span>
-          </div>
+            <span className="text-[9px] font-bold text-gray-800">{settings.deliveryTime} min</span>
+          </div>}
         </div>
         <div className="p-2.5">
-          <div onClick={onClick} className="cursor-pointer">
+          <div onClick={isOutOfStock ? undefined : onClick} className={isOutOfStock ? '' : 'cursor-pointer'}>
             <h3 className="font-bold text-sm text-gray-900 leading-tight line-clamp-2 min-h-[2.5rem]">{lang === 'te' ? product.te : product.name}</h3>
             <p className="text-xs text-gray-500 mt-0.5">{product.unit}</p>
           </div>
@@ -453,7 +466,9 @@ function CustomerApp({ user, userData, onSignOut }) {
               <div className="font-black text-gray-900">₹{product.price}</div>
               {product.mrp > product.price && <div className="text-[10px] text-gray-400 line-through">₹{product.mrp}</div>}
             </div>
-            {inCart ? (
+            {isOutOfStock ? (
+              <div className="text-[10px] text-gray-400 font-bold">Unavailable</div>
+            ) : inCart ? (
               <div className="flex items-center rounded-lg overflow-hidden" style={{ background: BRAND.primary }}>
                 <button onClick={() => onRemove(product.id)} className="p-1.5"><Minus size={14} color="white" /></button>
                 <span className="text-white font-black text-sm px-1 min-w-[20px] text-center">{inCart.qty}</span>
@@ -677,6 +692,7 @@ function CustomerApp({ user, userData, onSignOut }) {
     const [paymentMethod, setPaymentMethod] = useState('upi');
     const [deliveryType, setDeliveryType] = useState('quick');
     const [selectedSlot, setSelectedSlot] = useState(null);
+    const [slotError, setSlotError] = useState(false);
 
     const now = new Date();
     const todayLabel = now.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -706,7 +722,7 @@ function CustomerApp({ user, userData, onSignOut }) {
     ];
 
     const handlePlace = () => {
-      if (deliveryType === 'scheduled' && !selectedSlot) { alert('Please select a delivery slot.'); return; }
+      if (deliveryType === 'scheduled' && !selectedSlot) { setSlotError(true); return; }
       const slotObj = deliveryType === 'quick' ? { type: 'quick' }
         : { type: 'scheduled', slot: selectedSlot.id, label: `${selectedSlot.day} ${selectedSlot.label} (${selectedSlot.time})` };
       placeOrder(paymentMethod, slotObj);
@@ -754,6 +770,7 @@ function CustomerApp({ user, userData, onSignOut }) {
             {deliveryType === 'scheduled' && (
               <div className="space-y-2">
                 <div className="text-xs font-bold text-gray-500 uppercase">Select a slot</div>
+                {slotError && !selectedSlot && <div className="text-xs text-red-600 font-bold bg-red-50 px-3 py-2 rounded-lg">⚠️ Please select a delivery slot</div>}
                 <div className="grid grid-cols-2 gap-2">
                   {slots.map(s => (
                     <button key={s.id} onClick={() => setSelectedSlot(s)}
@@ -890,10 +907,10 @@ function CustomerApp({ user, userData, onSignOut }) {
           <div className="mx-4 mt-3 bg-white rounded-2xl p-4 flex items-center gap-3">
             <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-400 rounded-full flex items-center justify-center text-2xl">🧑‍🚀</div>
             <div className="flex-1">
-              <div className="font-bold text-sm">Suresh Reddy</div>
-              <div className="text-xs text-gray-500">Delivery Partner • ⭐ 4.9</div>
+              <div className="font-bold text-sm">{activeOrder.riderName || 'Your Rider'}</div>
+              <div className="text-xs text-gray-500">Delivery Partner • ⭐ {activeOrder.riderRating || '4.9'}</div>
             </div>
-            <a href={`tel:${settings.supportPhone}`} className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center"><Phone size={16} color="white" /></a>
+            <a href={`tel:${activeOrder.riderPhone || settings.supportPhone}`} className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center"><Phone size={16} color="white" /></a>
           </div>
         )}
         <div className="mx-4 mt-3 bg-white rounded-2xl p-4">
@@ -932,21 +949,38 @@ function CustomerApp({ user, userData, onSignOut }) {
       ) : (
         <div className="p-4 space-y-3">
           {orders.map(o => (
-            <div key={o.id} onClick={() => { setActiveOrder(o); setScreen('tracking'); }} className="bg-white rounded-2xl p-4 cursor-pointer">
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="text-xs font-bold text-gray-500">#{o.id}</div>
-                  <div className="font-black mt-0.5">{o.items.length} items • ₹{o.total}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">{new Date(o.placedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</div>
+            <div key={o.id} className="bg-white rounded-2xl p-4">
+              <div onClick={() => { setActiveOrder(o); setScreen('tracking'); }} className="cursor-pointer">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="text-xs font-bold text-gray-500">#{o.id}</div>
+                    <div className="font-black mt-0.5">{o.items.length} items • ₹{o.total}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{new Date(o.placedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</div>
+                  </div>
+                  <div className={`text-xs font-black px-2 py-1 rounded ${o.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>{(o.status || 'placed').replace('_', ' ').toUpperCase()}</div>
                 </div>
-                <div className={`text-xs font-black px-2 py-1 rounded ${o.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>{(o.status || 'placed').replace('_', ' ').toUpperCase()}</div>
+                <div className="mt-3 flex gap-1">
+                  {o.items.slice(0, 5).map(it => (
+                    <div key={it.id} className="w-9 h-9 bg-orange-50 rounded-lg flex items-center justify-center text-lg">{it.emoji}</div>
+                  ))}
+                  {o.items.length > 5 && <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center text-xs font-bold">+{o.items.length - 5}</div>}
+                </div>
               </div>
-              <div className="mt-3 flex gap-1">
-                {o.items.slice(0, 5).map(it => (
-                  <div key={it.id} className="w-9 h-9 bg-orange-50 rounded-lg flex items-center justify-center text-lg">{it.emoji}</div>
-                ))}
-                {o.items.length > 5 && <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center text-xs font-bold">+{o.items.length - 5}</div>}
-              </div>
+              {o.status === 'delivered' && (
+                <button
+                  onClick={() => {
+                    const reCart = {};
+                    o.items.forEach(it => { reCart[it.id] = { ...it }; });
+                    setCart(reCart);
+                    showToast('Items added to cart!');
+                    setScreen('cart');
+                  }}
+                  className="mt-3 w-full py-2 rounded-xl border-2 text-xs font-black active:scale-[0.98] transition"
+                  style={{ borderColor: BRAND.primary, color: BRAND.primary }}
+                >
+                  🔄 Reorder
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -1018,9 +1052,9 @@ function CustomerApp({ user, userData, onSignOut }) {
         {[
           { icon: <Package size={18} />, label: 'My Orders', action: () => setScreen('orders') },
           { icon: <MapPin size={18} />, label: 'Saved Addresses', action: () => setScreen('address') },
-          { icon: <Heart size={18} />, label: 'Favorites', action: () => {} },
+          { icon: <Heart size={18} />, label: 'Favorites', action: () => setScreen('orders') },
           { icon: <Bell size={18} />, label: 'Notifications', action: () => {} },
-          { icon: <Phone size={18} />, label: `Support: ${settings.supportPhone}`, action: () => {} },
+          { icon: <Phone size={18} />, label: `Support: ${settings.supportPhone}`, action: () => { window.location.href = `tel:${settings.supportPhone.replace(/\s/g, '')}`; } },
         ].map((item, i) => (
           <button key={i} onClick={item.action} className="w-full p-4 flex items-center gap-3 active:bg-gray-50">
             <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center">{item.icon}</div>
@@ -1189,6 +1223,14 @@ function CustomerApp({ user, userData, onSignOut }) {
       {screen === 'subscription' && <SubscriptionScreen />}
       <FloatingCart />
       <BottomNav />
+      {toast && (
+        <div className="fixed top-4 left-4 right-4 max-w-md mx-auto z-50" style={{ animation: 'slide-up 0.3s ease-out' }}>
+          <div className={`px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 ${toast.type === 'error' ? 'bg-red-600' : 'bg-gray-900'}`}>
+            <span className="text-lg">{toast.type === 'error' ? '❌' : '✅'}</span>
+            <span className="text-white font-bold text-sm flex-1">{toast.msg}</span>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -1217,7 +1259,14 @@ function RiderApp({ user, userData, onSignOut }) {
   const todayEarnings = myCompletedToday.length * 35; // ₹35 per delivery
 
   const acceptOrder = (orderId) => {
-    const updated = orders.map(o => o.id === orderId ? { ...o, assignedRider: riderProfile.phone, status: 'packing' } : o);
+    const updated = orders.map(o => o.id === orderId ? {
+      ...o,
+      assignedRider: riderProfile.phone,
+      riderName: riderProfile.name,
+      riderPhone: riderProfile.phone,
+      riderRating: riderProfile.rating,
+      status: 'packing',
+    } : o);
     setOrders(updated);
     setActiveDelivery(updated.find(o => o.id === orderId));
     setScreen('delivery');
@@ -1228,6 +1277,7 @@ function RiderApp({ user, userData, onSignOut }) {
     setOrders(updated);
     setActiveDelivery(updated.find(o => o.id === orderId));
     if (status === 'delivered') {
+      setRiderProfile(p => ({ ...p, totalDeliveries: (p.totalDeliveries || 0) + 1 }));
       setTimeout(() => { setActiveDelivery(null); setScreen('home'); }, 1500);
     }
   };
