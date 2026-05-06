@@ -104,13 +104,15 @@ export default function RiderLoginPage() {
             </Button>
           </form>
 
-          <p className="text-center text-xs text-gray-400 mt-6">
-            Only VEGU delivery partners can log in here.
+          <p className="text-center text-sm text-gray-500 mt-5">
+            New rider?{' '}
+            <a href="/rider/register" className="text-green-600 font-semibold hover:underline">
+              Join as a rider
+            </a>
           </p>
         </div>
 
-        {/* Back to customer app */}
-        <p className="text-center mt-6">
+        <p className="text-center mt-5">
           <a href="/" className="text-green-200 text-sm hover:text-white transition-colors">
             ← Back to VEGU Shopping App
           </a>
