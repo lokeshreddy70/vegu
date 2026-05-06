@@ -2,16 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, Mail, Lock, User, Bike, Car, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+
+// Use raw axios — NOT the api instance — so the request interceptor
+// (which injects the currently stored token) cannot override our explicit headers.
+const rawApi = axios.create({
+  baseURL: '',
+  timeout: 20000,
+  headers: { 'Content-Type': 'application/json' },
+});
 
 const schema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -32,7 +40,7 @@ const vehicles = [
 
 export default function RiderRegisterPage() {
   const [showPass, setShowPass] = useState(false);
-  const [step, setStep] = useState<'form' | 'success'>('form');
+  const [done, setDone] = useState(false);
   const router = useRouter();
   const { setAuth, user, isAuthenticated } = useAuthStore();
 
@@ -51,43 +59,41 @@ export default function RiderRegisterPage() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      // Step 1: Create account
-      const regRes = await api.post('/api/auth/register', {
+      // Step 1: Create account — raw axios so no stale token is injected
+      const regRes = await rawApi.post('/api/auth/register', {
         name: data.name,
         email: data.email,
         password: data.password,
       });
-      if (!regRes.data?.data) throw new Error('Registration failed');
-      const { accessToken: tempToken } = regRes.data.data;
+      const tempToken: string = regRes.data.data.accessToken;
 
-      // Step 2: Register as delivery partner using the fresh token
-      await api.post('/api/rider/register', {
-        vehicleType: data.vehicleType,
-        vehicleNo: data.vehicleNo || undefined,
-      }, {
-        headers: { Authorization: `Bearer ${tempToken}` },
-      });
+      // Step 2: Register as delivery partner using the brand-new token explicitly
+      // Raw axios bypasses the interceptor that would inject the old stored token.
+      await rawApi.post(
+        '/api/rider/register',
+        { vehicleType: data.vehicleType, vehicleNo: data.vehicleNo || undefined },
+        { headers: { Authorization: `Bearer ${tempToken}` } },
+      );
 
-      // Step 3: Re-login to get a token with DELIVERY role
-      const loginRes = await api.post('/api/auth/login', {
+      // Step 3: Re-login — role is now DELIVERY in DB, get a fresh token reflecting that
+      const loginRes = await rawApi.post('/api/auth/login', {
         email: data.email,
         password: data.password,
       });
-      if (!loginRes.data?.data) throw new Error('Login failed');
       const { user: riderUser, accessToken, refreshToken } = loginRes.data.data;
 
       setAuth(riderUser, accessToken, refreshToken);
-      setStep('success');
-
+      setDone(true);
       setTimeout(() => router.push('/rider'), 2000);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-        || 'Registration failed. Please try again.';
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'Registration failed. Please try again.';
       toast.error(msg);
     }
   };
 
-  if (step === 'success') {
+  if (done) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-600 to-green-800 px-4">
         <motion.div
@@ -113,7 +119,6 @@ export default function RiderRegisterPage() {
         transition={{ duration: 0.4 }}
         className="w-full max-w-sm"
       >
-        {/* Header */}
         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
             <Bike className="w-8 h-8 text-green-600" />
@@ -122,7 +127,6 @@ export default function RiderRegisterPage() {
           <p className="text-green-200 text-sm">Earn money delivering groceries</p>
         </div>
 
-        {/* Perks */}
         <div className="grid grid-cols-3 gap-2 mb-6">
           {[
             { icon: '💰', label: 'Earn ₹500+/day' },
@@ -136,7 +140,6 @@ export default function RiderRegisterPage() {
           ))}
         </div>
 
-        {/* Form */}
         <div className="bg-white rounded-3xl p-6 shadow-2xl">
           <h2 className="text-lg font-bold text-gray-900 mb-5 text-center">Create your rider account</h2>
 
@@ -173,7 +176,6 @@ export default function RiderRegisterPage() {
               {...register('password')}
             />
 
-            {/* Vehicle type */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Vehicle type</label>
               <div className="grid grid-cols-4 gap-2">
@@ -193,7 +195,6 @@ export default function RiderRegisterPage() {
                   </button>
                 ))}
               </div>
-              {errors.vehicleType && <p className="text-red-500 text-xs mt-1">{errors.vehicleType.message}</p>}
             </div>
 
             <Input
@@ -209,15 +210,13 @@ export default function RiderRegisterPage() {
               loading={isSubmitting}
               className="w-full !bg-green-600 hover:!bg-green-700 mt-2"
             >
-              {isSubmitting ? 'Creating account...' : 'Start Delivering'}
+              {isSubmitting ? 'Setting up account...' : 'Start Delivering'}
             </Button>
           </form>
 
           <p className="text-center text-sm text-gray-500 mt-5">
             Already a rider?{' '}
-            <a href="/rider/login" className="text-green-600 font-semibold hover:underline">
-              Sign in
-            </a>
+            <a href="/rider/login" className="text-green-600 font-semibold hover:underline">Sign in</a>
           </p>
         </div>
 
