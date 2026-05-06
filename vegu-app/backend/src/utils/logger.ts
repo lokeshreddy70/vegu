@@ -19,12 +19,14 @@ const prodFormat = combine(
   json()
 );
 
+const isServerless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+
 export const logger = winston.createLogger({
   level: config.isDev ? 'debug' : 'info',
   format: config.isDev ? devFormat : prodFormat,
   transports: [
     new winston.transports.Console(),
-    ...(!config.isDev
+    ...(!config.isDev && !isServerless
       ? [
           new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
           new winston.transports.File({ filename: 'logs/combined.log' }),
