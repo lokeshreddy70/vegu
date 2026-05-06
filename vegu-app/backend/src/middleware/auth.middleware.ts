@@ -18,6 +18,15 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
   }
 };
 
+export const requireRole = (...roles: string[]) =>
+  (req: AuthRequest, res: Response, next: NextFunction): void => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      sendError(res, 'Forbidden', 403);
+      return;
+    }
+    next();
+  };
+
 export const optionalAuth = (req: AuthRequest, _res: Response, next: NextFunction): void => {
   const header = req.headers.authorization;
   if (header?.startsWith('Bearer ')) {

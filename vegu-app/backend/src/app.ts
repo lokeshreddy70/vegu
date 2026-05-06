@@ -17,6 +17,7 @@ import adminRoutes from './routes/admin.routes';
 import bannerRoutes from './routes/banner.routes';
 import wishlistRoutes from './routes/wishlist.routes';
 import notificationRoutes from './routes/notification.routes';
+import riderRoutes from './routes/rider.routes';
 
 const app = express();
 
@@ -91,6 +92,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/banners', bannerRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/rider', riderRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
