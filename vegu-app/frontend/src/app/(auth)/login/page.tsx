@@ -31,6 +31,7 @@ export default function LoginPage() {
   const onSubmit = async (data: FormData) => {
     try {
       const res = await api.post('/api/auth/login', data);
+      if (!res.data?.data) throw new Error('Invalid server response');
       const { user, accessToken, refreshToken } = res.data.data;
       setAuth(user, accessToken, refreshToken);
       toast.success(`Welcome back, ${user.name.split(' ')[0]}!`);
@@ -39,7 +40,7 @@ export default function LoginPage() {
       else if (user.role === 'DELIVERY') router.push('/rider');
       else router.push('/');
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Login failed';
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Login failed. Check your email and password.';
       toast.error(msg);
     }
   };

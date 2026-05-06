@@ -30,6 +30,15 @@ interface AuthStore {
   logout: () => void;
 }
 
+const safeStorage = {
+  set: (key: string, value: string) => {
+    try { if (typeof window !== 'undefined') localStorage.setItem(key, value); } catch {}
+  },
+  remove: (key: string) => {
+    try { if (typeof window !== 'undefined') localStorage.removeItem(key); } catch {}
+  },
+};
+
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set) => ({
@@ -39,19 +48,14 @@ export const useAuthStore = create<AuthStore>()(
       isAuthenticated: false,
 
       setAuth: (user, accessToken, refreshToken) => {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('accessToken', accessToken);
-          localStorage.setItem('refreshToken', refreshToken);
-        }
+        safeStorage.set('accessToken', accessToken);
+        safeStorage.set('refreshToken', refreshToken);
         set({ user, accessToken, refreshToken, isAuthenticated: true });
       },
 
-      // Called by Axios interceptor after silent token refresh — keeps store in sync
       setTokens: (accessToken, refreshToken) => {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('accessToken', accessToken);
-          localStorage.setItem('refreshToken', refreshToken);
-        }
+        safeStorage.set('accessToken', accessToken);
+        safeStorage.set('refreshToken', refreshToken);
         set({ accessToken, refreshToken });
       },
 
@@ -59,13 +63,20 @@ export const useAuthStore = create<AuthStore>()(
         set((state) => ({ user: state.user ? { ...state.user, ...partial } : null })),
 
       logout: () => {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-        }
+        safeStorage.remove('accessToken');
+        safeStorage.remove('refreshToken');
         set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
       },
     }),
-    { name: 'vegu-auth' }
+    {
+      name: 'vegu-auth',
+      // Persist only what's needed — don't store sensitive tokens in 2 places
+      partialize: (state) => ({
+        user: state.user,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    }
   )
 );

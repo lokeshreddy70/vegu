@@ -16,15 +16,44 @@ const nextConfig = {
       },
     ];
   },
+  async headers() {
+    return [
+      {
+        // Never cache HTML pages — always get fresh content
+        source: '/((?!_next/static|_next/image|favicon|icons|manifest).*)',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, must-revalidate' },
+        ],
+      },
+    ];
+  },
 };
 
 export default withPWA({
   dest: 'public',
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
+  cacheOnFrontEndNav: false,
+  aggressiveFrontEndNavCaching: false,
   reloadOnOnline: true,
   disable: process.env.NODE_ENV === 'development',
   workboxOptions: {
     disableDevLogs: true,
+    // Don't cache API routes at all
+    runtimeCaching: [
+      {
+        urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+        handler: 'CacheFirst',
+        options: { cacheName: 'google-fonts-stylesheets', expiration: { maxEntries: 4, maxAgeSeconds: 604800 } },
+      },
+      {
+        urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+        handler: 'CacheFirst',
+        options: { cacheName: 'google-fonts-webfonts', expiration: { maxEntries: 4, maxAgeSeconds: 31536000 } },
+      },
+      {
+        urlPattern: /\/_next\/static\/.*/i,
+        handler: 'CacheFirst',
+        options: { cacheName: 'next-static', expiration: { maxEntries: 128, maxAgeSeconds: 86400 } },
+      },
+    ],
   },
 })(nextConfig);

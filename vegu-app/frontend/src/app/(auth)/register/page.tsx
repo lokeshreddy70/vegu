@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Mail, Lock, User, Phone, Leaf } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Leaf } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
@@ -17,7 +17,6 @@ import Input from '@/components/ui/Input';
 const schema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Enter a valid email'),
-  phone: z.string().min(10, 'Enter a valid phone number').optional().or(z.literal('')),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
@@ -33,18 +32,21 @@ export default function RegisterPage() {
   const onSubmit = async (data: FormData) => {
     try {
       const res = await api.post('/api/auth/register', data);
+      if (!res.data?.data) throw new Error('Invalid server response');
       const { user, accessToken, refreshToken } = res.data.data;
       setAuth(user, accessToken, refreshToken);
       toast.success(`Welcome to VEGU, ${user.name.split(' ')[0]}!`);
-      router.push('/');
+      if (user.role === 'ADMIN') router.push('/admin');
+      else if (user.role === 'VENDOR') router.push('/vendor');
+      else router.push('/');
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Registration failed';
-      toast.error(msg);
+      const axiosMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(axiosMsg || 'Could not create account. Please try again.');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-green-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-green-50 px-4 py-8">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -58,15 +60,16 @@ export default function RegisterPage() {
             </div>
             VEGU
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create account</h1>
-          <p className="text-gray-500">Join thousands of happy customers</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Create account</h1>
+          <p className="text-gray-500 text-sm">Fresh groceries, delivered fast</p>
         </div>
 
-        <div className="card p-8 shadow-xl">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <div className="card p-6 sm:p-8 shadow-xl">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-5">
             <Input
               label="Full name"
               placeholder="Your full name"
+              autoComplete="name"
               icon={<User className="w-4 h-4" />}
               error={errors.name?.message}
               {...register('name')}
@@ -75,25 +78,19 @@ export default function RegisterPage() {
               label="Email address"
               type="email"
               placeholder="you@example.com"
+              autoComplete="email"
               icon={<Mail className="w-4 h-4" />}
               error={errors.email?.message}
               {...register('email')}
             />
             <Input
-              label="Phone (optional)"
-              type="tel"
-              placeholder="+91 9876543210"
-              icon={<Phone className="w-4 h-4" />}
-              error={errors.phone?.message}
-              {...register('phone')}
-            />
-            <Input
               label="Password"
               type={showPass ? 'text' : 'password'}
               placeholder="Min. 8 characters"
+              autoComplete="new-password"
               icon={<Lock className="w-4 h-4" />}
               rightIcon={
-                <button type="button" onClick={() => setShowPass(!showPass)}>
+                <button type="button" onClick={() => setShowPass(!showPass)} aria-label="Toggle password">
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               }
@@ -113,6 +110,10 @@ export default function RegisterPage() {
                 Sign in
               </Link>
             </p>
+          </div>
+
+          <div className="mt-4 p-3 bg-gray-50 rounded-2xl text-xs text-gray-500 text-center">
+            Demo: customer@vegu.app / Customer@2024
           </div>
         </div>
       </motion.div>
