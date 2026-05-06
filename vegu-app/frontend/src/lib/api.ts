@@ -1,7 +1,14 @@
 import axios from 'axios';
 
+// Client: empty baseURL → Next.js rewrite proxies /api/* to the backend (no CORS)
+// Server: full URL for SSR calls
+const baseURL =
+  typeof window === 'undefined'
+    ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+    : '';
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
+  baseURL,
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 });
