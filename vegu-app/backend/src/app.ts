@@ -34,7 +34,12 @@ app.use(helmet({
 
 app.use(cors({
   origin: (origin, cb) => {
-    const allowed = [config.frontendUrl, 'http://localhost:3000', 'http://localhost:3001'];
+    const allowed = [
+      config.frontendUrl,
+      'https://vegu-app.vercel.app',
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ];
     if (!origin || allowed.includes(origin)) return cb(null, true);
     cb(new Error(`CORS blocked: ${origin}`));
   },
