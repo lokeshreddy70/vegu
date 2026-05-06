@@ -9,6 +9,7 @@ import { ShoppingCart, Star, Minus, Plus, ArrowLeft, Heart, Share2, Truck, Shiel
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { useCartStore } from '@/store/cart.store';
+import { syncAddToCart } from '@/lib/cartSync';
 import { formatPrice, getStatusColor } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 
@@ -53,6 +54,7 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     addItem({ id: product.id, name: product.name, slug: product.slug, price: product.price, images: product.images, unit: product.unit, stock: product.stock }, qty);
+    syncAddToCart(product.id, qty);
     toast.success(`${product.name} added to cart`);
   };
 

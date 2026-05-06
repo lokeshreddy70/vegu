@@ -32,7 +32,7 @@ interface ActiveOrder {
   total: number;
   deliveryFee: number;
   user: { name: string; phone: string | null };
-  address: { street: string; city: string; label: string } | null;
+  address: { line1: string; city: string; label: string } | null;
   items: { quantity: number; product: { name: string } }[];
 }
 
@@ -42,7 +42,7 @@ interface AvailableOrder {
   total: number;
   deliveryFee: number;
   user: { name: string };
-  address: { street: string; city: string; label: string } | null;
+  address: { line1: string; city: string; label: string } | null;
   items: { quantity: number }[];
 }
 
@@ -115,10 +115,11 @@ export default function RiderDashboard() {
   });
 
   useEffect(() => {
-    if (!user) router.push('/login');
+    if (!user) router.push('/rider/login');
+    else if (user.role !== 'DELIVERY') router.push('/rider/login');
   }, [user, router]);
 
-  if (!user) return null;
+  if (!user || user.role !== 'DELIVERY') return null;
 
   if (isLoading) {
     return (
@@ -228,7 +229,7 @@ export default function RiderDashboard() {
               {activeOrder.address && (
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                    `${activeOrder.address.street}, ${activeOrder.address.city}`
+                    `${activeOrder.address.line1}, ${activeOrder.address.city}`
                   )}`}
                   target="_blank"
                   rel="noreferrer"
@@ -236,7 +237,7 @@ export default function RiderDashboard() {
                 >
                   <MapPin className="w-4 h-4 text-red-500 flex-shrink-0" />
                   <span className="text-sm text-gray-700 flex-1">
-                    {activeOrder.address.street}, {activeOrder.address.city}
+                    {activeOrder.address.line1}, {activeOrder.address.city}
                   </span>
                   <ChevronRight className="w-4 h-4 text-gray-400" />
                 </a>
@@ -326,7 +327,7 @@ export default function RiderDashboard() {
               {order.address && (
                 <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
                   <MapPin className="w-4 h-4 text-red-400 flex-shrink-0" />
-                  <span className="truncate">{order.address.street}, {order.address.city}</span>
+                  <span className="truncate">{order.address.line1}, {order.address.city}</span>
                 </div>
               )}
 

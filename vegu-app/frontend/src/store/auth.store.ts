@@ -25,6 +25,7 @@ interface AuthStore {
   refreshToken: string | null;
   isAuthenticated: boolean;
   setAuth: (user: AuthUser, accessToken: string, refreshToken: string) => void;
+  setTokens: (accessToken: string, refreshToken: string) => void;
   updateUser: (user: Partial<AuthUser>) => void;
   logout: () => void;
 }
@@ -38,12 +39,20 @@ export const useAuthStore = create<AuthStore>()(
       isAuthenticated: false,
 
       setAuth: (user, accessToken, refreshToken) => {
-        // Keep localStorage in sync for the axios interceptor
         if (typeof window !== 'undefined') {
           localStorage.setItem('accessToken', accessToken);
           localStorage.setItem('refreshToken', refreshToken);
         }
         set({ user, accessToken, refreshToken, isAuthenticated: true });
+      },
+
+      // Called by Axios interceptor after silent token refresh — keeps store in sync
+      setTokens: (accessToken, refreshToken) => {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('accessToken', accessToken);
+          localStorage.setItem('refreshToken', refreshToken);
+        }
+        set({ accessToken, refreshToken });
       },
 
       updateUser: (partial) =>
@@ -57,17 +66,6 @@ export const useAuthStore = create<AuthStore>()(
         set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
       },
     }),
-    {
-      name: 'vegu-auth',
-      // Re-sync localStorage whenever the persisted store rehydrates
-      onRehydrateStorage: () => (state) => {
-        if (state?.accessToken && typeof window !== 'undefined') {
-          localStorage.setItem('accessToken', state.accessToken);
-        }
-        if (state?.refreshToken && typeof window !== 'undefined') {
-          localStorage.setItem('refreshToken', state.refreshToken);
-        }
-      },
-    }
+    { name: 'vegu-auth' }
   )
 );

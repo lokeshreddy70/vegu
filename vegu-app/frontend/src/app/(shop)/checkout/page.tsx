@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { useCartStore, useCartSubtotal } from '@/store/cart.store';
 import { useAuthStore } from '@/store/auth.store';
+import { pushLocalCartToDB } from '@/lib/cartSync';
 import { formatPrice } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 
@@ -22,6 +23,7 @@ interface Address {
   city: string;
   state: string;
   pincode: string;
+  isDefault?: boolean;
 }
 
 export default function CheckoutPage() {
@@ -31,21 +33,29 @@ export default function CheckoutPage() {
   const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'RAZORPAY'>('COD');
   const [coupon, setCoupon] = useState('');
+  const [hydrated, setHydrated] = useState(false);
+  const [synced, setSynced] = useState(false);
 
+  // Step 1: wait for Zustand to hydrate from localStorage
+  useEffect(() => { setHydrated(true); }, []);
+
+  // Step 2: after hydration, auth-guard + push local cart → DB before backend reads it
   useEffect(() => {
-    if (!isAuthenticated) router.push('/login');
-    if (items.length === 0) router.push('/cart');
-  }, [isAuthenticated, items, router]);
+    if (!hydrated) return;
+    if (!isAuthenticated) { router.push('/login'); return; }
+    if (items.length === 0) { router.push('/cart'); return; }
+    pushLocalCartToDB(items).then(() => setSynced(true));
+  }, [hydrated, isAuthenticated, items, router]);
 
   const { data: addresses = [], isLoading: addrLoading } = useQuery<Address[]>({
     queryKey: ['addresses'],
     queryFn: () => api.get('/api/addresses').then(r => r.data.data),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && synced,
   });
 
   useEffect(() => {
     if (addresses.length > 0 && !selectedAddress) {
-      const def = addresses.find((a) => (a as Address & { isDefault: boolean }).isDefault) || addresses[0];
+      const def = addresses.find((a) => a.isDefault) || addresses[0];
       setSelectedAddress(def.id);
     }
   }, [addresses, selectedAddress]);
@@ -72,19 +82,34 @@ export default function CheckoutPage() {
     { id: 'RAZORPAY', label: 'Online Payment', icon: '💳', desc: 'Cards, UPI, Net Banking' },
   ];
 
-  return (
-    <div className="container-page py-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
+  if (!hydrated || !synced) {
+    return (
+      <div className="container-page py-8">
+        <div className="skeleton h-10 w-40 rounded-xl mb-8" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="skeleton h-48 rounded-3xl" />
+            <div className="skeleton h-36 rounded-3xl" />
+          </div>
+          <div className="skeleton h-72 rounded-3xl" />
+        </div>
+      </div>
+    );
+  }
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
+  return (
+    <div className="container-page py-4 sm:py-8">
+      <h1 className="text-xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">Checkout</h1>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
           {/* Delivery Address */}
-          <div className="card p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-8 h-8 rounded-xl bg-primary-100 flex items-center justify-center">
+          <div className="card p-4 sm:p-6">
+            <div className="flex items-center gap-3 mb-4 sm:mb-5">
+              <div className="w-8 h-8 rounded-xl bg-primary-100 flex items-center justify-center shrink-0">
                 <MapPin className="w-4 h-4 text-primary-600" />
               </div>
-              <h2 className="text-lg font-bold text-gray-900">Delivery Address</h2>
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">Delivery Address</h2>
             </div>
 
             {addrLoading ? (
@@ -96,7 +121,7 @@ export default function CheckoutPage() {
                 <MapPin className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500 mb-4">No addresses saved</p>
                 <Button variant="secondary" size="sm" onClick={() => router.push('/account/addresses')}>
-                  <Plus className="w-4 h-4" /> Add Address
+                  <Plus className="w-4 h-4 mr-1" /> Add Address
                 </Button>
               </div>
             ) : (
@@ -106,21 +131,21 @@ export default function CheckoutPage() {
                     key={addr.id}
                     onClick={() => setSelectedAddress(addr.id)}
                     whileTap={{ scale: 0.99 }}
-                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                    className={`p-3 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all ${
                       selectedAddress === addr.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="badge badge-gray">{addr.label}</span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="badge badge-gray text-xs">{addr.label}</span>
                           <span className="font-semibold text-gray-900 text-sm">{addr.fullName}</span>
                         </div>
-                        <p className="text-sm text-gray-600">{addr.line1}{addr.line2 ? `, ${addr.line2}` : ''}</p>
+                        <p className="text-sm text-gray-600 truncate">{addr.line1}{addr.line2 ? `, ${addr.line2}` : ''}</p>
                         <p className="text-sm text-gray-600">{addr.city}, {addr.state} — {addr.pincode}</p>
                         <p className="text-sm text-gray-500 mt-0.5">{addr.phone}</p>
                       </div>
-                      {selectedAddress === addr.id && <CheckCircle className="w-5 h-5 text-primary-600 shrink-0" />}
+                      {selectedAddress === addr.id && <CheckCircle className="w-5 h-5 text-primary-600 shrink-0 mt-0.5" />}
                     </div>
                   </motion.div>
                 ))}
@@ -132,12 +157,12 @@ export default function CheckoutPage() {
           </div>
 
           {/* Payment */}
-          <div className="card p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-8 h-8 rounded-xl bg-primary-100 flex items-center justify-center">
+          <div className="card p-4 sm:p-6">
+            <div className="flex items-center gap-3 mb-4 sm:mb-5">
+              <div className="w-8 h-8 rounded-xl bg-primary-100 flex items-center justify-center shrink-0">
                 <CreditCard className="w-4 h-4 text-primary-600" />
               </div>
-              <h2 className="text-lg font-bold text-gray-900">Payment Method</h2>
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">Payment Method</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {paymentOptions.map((opt) => (
@@ -145,13 +170,13 @@ export default function CheckoutPage() {
                   key={opt.id}
                   onClick={() => setPaymentMethod(opt.id as 'COD' | 'RAZORPAY')}
                   whileTap={{ scale: 0.98 }}
-                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                  className={`p-3 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all ${
                     paymentMethod === opt.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">{opt.icon}</span>
+                      <span className="text-xl sm:text-2xl">{opt.icon}</span>
                       <div>
                         <p className="font-semibold text-gray-900 text-sm">{opt.label}</p>
                         <p className="text-xs text-gray-500">{opt.desc}</p>
@@ -173,9 +198,9 @@ export default function CheckoutPage() {
 
         {/* Summary */}
         <div>
-          <div className="card p-6 sticky top-24 space-y-4">
-            <h2 className="text-lg font-bold text-gray-900">Order Summary</h2>
-            <div className="space-y-3 max-h-48 overflow-y-auto">
+          <div className="card p-4 sm:p-6 lg:sticky lg:top-24 space-y-4">
+            <h2 className="text-base sm:text-lg font-bold text-gray-900">Order Summary</h2>
+            <div className="space-y-3 max-h-40 sm:max-h-48 overflow-y-auto">
               {items.map((item) => (
                 <div key={item.product.id} className="flex justify-between text-sm">
                   <span className="text-gray-600 line-clamp-1 flex-1">{item.product.name} × {item.quantity}</span>
@@ -183,6 +208,17 @@ export default function CheckoutPage() {
                 </div>
               ))}
             </div>
+
+            <div className="flex gap-2 p-3 bg-gray-50 rounded-2xl">
+              <input
+                value={coupon}
+                onChange={e => setCoupon(e.target.value)}
+                placeholder="Promo code"
+                className="bg-transparent text-sm flex-1 outline-none text-gray-700 placeholder:text-gray-400"
+              />
+              <button type="button" className="text-xs font-semibold text-primary-600 hover:text-primary-700">Apply</button>
+            </div>
+
             <div className="border-t border-gray-100 pt-4 space-y-2 text-sm">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal</span>
@@ -194,11 +230,12 @@ export default function CheckoutPage() {
                   {deliveryFee === 0 ? 'FREE' : formatPrice(deliveryFee)}
                 </span>
               </div>
-              <div className="flex justify-between font-bold text-lg border-t border-gray-100 pt-3">
+              <div className="flex justify-between font-bold text-base sm:text-lg border-t border-gray-100 pt-3">
                 <span>Total</span>
                 <span className="text-primary-600">{formatPrice(total)}</span>
               </div>
             </div>
+
             <Button
               className="w-full"
               loading={isPending}

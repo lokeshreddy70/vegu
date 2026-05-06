@@ -36,6 +36,7 @@ export default function LoginPage() {
       toast.success(`Welcome back, ${user.name.split(' ')[0]}!`);
       if (user.role === 'ADMIN') router.push('/admin');
       else if (user.role === 'VENDOR') router.push('/vendor');
+      else if (user.role === 'DELIVERY') router.push('/rider');
       else router.push('/');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Login failed';

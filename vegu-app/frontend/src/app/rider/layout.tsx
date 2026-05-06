@@ -1,0 +1,10 @@
+'use client';
+
+// Rider app has its own layout — no customer header/footer
+export default function RiderLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {children}
+    </div>
+  );
+}
