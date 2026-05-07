@@ -84,32 +84,6 @@ app.get('/health', (_req, res) =>
   res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() })
 );
 
-// One-time admin restore — protected by a secret key, auto-disables after use
-const RESTORE_SECRET = 'vegu-restore-2025-ce6b7c0';
-app.post('/ops/restore-admin', async (req, res) => {
-  const { secret } = req.body as { secret?: string };
-  if (secret !== RESTORE_SECRET) {
-    res.status(403).json({ success: false, message: 'Forbidden' });
-    return;
-  }
-  const { prisma } = await import('./prisma/client');
-  const affected = await prisma.user.findMany({
-    where: { OR: [{ email: 'admin@vegu.app' }, { name: 'VEGU Admin' }] },
-    select: { id: true, email: true, name: true, role: true },
-  });
-  const results = [];
-  for (const u of affected) {
-    if (u.role !== 'ADMIN') {
-      await prisma.user.update({ where: { id: u.id }, data: { role: 'ADMIN' } });
-      await prisma.deliveryPartner.deleteMany({ where: { userId: u.id } });
-      await prisma.refreshToken.deleteMany({ where: { userId: u.id } });
-      results.push({ email: u.email, action: 'restored to ADMIN, sessions cleared' });
-    } else {
-      results.push({ email: u.email, action: 'already ADMIN — no change' });
-    }
-  }
-  res.json({ success: true, results });
-});
 
 // Routes
 app.use('/api/auth', authRoutes);
