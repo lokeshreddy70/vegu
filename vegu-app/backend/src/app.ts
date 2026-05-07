@@ -39,11 +39,13 @@ app.use(cors({
     const allowed = [
       config.frontendUrl,
       'https://vegu-app.vercel.app',
+      'https://vegu-repo.vercel.app',
+      'https://frontend-jet-sigma-69.vercel.app',
       'http://localhost:3000',
       'http://localhost:3001',
     ];
     // Allow all Vercel preview deployments for this project
-    const isVercelPreview = origin && /^https:\/\/vegu-app(-[a-z0-9-]+)?\.vercel\.app$/.test(origin);
+    const isVercelPreview = origin && /^https:\/\/(vegu-app|vegu-repo|frontend)(-[a-z0-9-]+)?\.vercel\.app$/.test(origin);
     if (!origin || allowed.includes(origin) || isVercelPreview) return cb(null, true);
     cb(new Error(`CORS blocked: ${origin}`));
   },
