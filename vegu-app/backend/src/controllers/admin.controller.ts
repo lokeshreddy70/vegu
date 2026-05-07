@@ -42,7 +42,7 @@ export const getDashboard = async (_req: Request, res: Response): Promise<void> 
     prisma.order.count({ where: { status: 'DELIVERED', deliveredAt: { gte: today } } }),
     prisma.order.count({ where: { status: 'CANCELLED', createdAt: { gte: monthAgo } } }),
     prisma.product.findMany({ where: { stock: { lte: 5 }, isAvailable: true }, take: 5, select: { id: true, name: true, stock: true, images: true }, orderBy: { stock: 'asc' } }),
-    prisma.order.findMany({ take: 10, orderBy: { updatedAt: 'desc' }, include: { user: { select: { name: true } } }, select: { id: true, orderNumber: true, status: true, total: true, createdAt: true, updatedAt: true, user: { select: { name: true } } } }),
+    prisma.order.findMany({ take: 10, orderBy: { updatedAt: 'desc' }, select: { id: true, orderNumber: true, status: true, total: true, createdAt: true, updatedAt: true, user: { select: { name: true } } } }),
     // Revenue for last 7 days
     Promise.all(Array.from({ length: 7 }, (_, i) => {
       const d = new Date(today);
