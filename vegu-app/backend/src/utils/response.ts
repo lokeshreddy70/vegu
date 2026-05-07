@@ -15,11 +15,14 @@ export const sendPaginated = <T>(
   total: number,
   page: number,
   limit: number,
-  message = 'Success'
-) =>
+  extra?: Record<string, unknown> | string,
+) => {
+  const message = typeof extra === 'string' ? extra : 'Success';
+  const extraMeta = typeof extra === 'object' ? extra : {};
   res.status(200).json({
     success: true,
     message,
     data,
-    meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    meta: { page, limit, total, totalPages: Math.ceil(total / limit), ...extraMeta },
   });
+};
