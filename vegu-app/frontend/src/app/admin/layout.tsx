@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, Users, ShoppingBag, Package, Image, Leaf, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { cn } from '@/lib/utils';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const navItems = [
   { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
@@ -24,11 +25,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (!isAuthenticated || user?.role !== 'ADMIN') router.push('/login');
   }, [isAuthenticated, user, router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    logout();
-    router.push('/');
+  const handleLogout = async () => {
+    try {
+      const { accessToken, refreshToken } = useAuthStore.getState();
+      if (refreshToken) {
+        // Tell backend to revoke this session
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ refreshToken }),
+        }).catch(() => {}); // ignore network errors — still log out locally
+      }
+    } finally {
+      logout();
+      router.push('/login');
+    }
   };
 
   return (
@@ -67,14 +78,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <p className="text-gray-500 text-xs">Administrator</p>
             </div>
           </div>
-          <button onClick={handleLogout} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm px-3 py-2 rounded-xl hover:bg-gray-800 transition-all w-full">
+          <button type="button" onClick={handleLogout} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm px-3 py-2 rounded-xl hover:bg-gray-800 transition-all w-full">
             <LogOut className="w-4 h-4" /> Sign Out
           </button>
         </div>
       </aside>
 
       {/* Main */}
-      <main className="flex-1 ml-64 p-8">{children}</main>
+      <main className="flex-1 ml-64 p-8">
+        <ErrorBoundary portal="admin">{children}</ErrorBoundary>
+      </main>
     </div>
   );
 }

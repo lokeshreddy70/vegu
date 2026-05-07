@@ -18,6 +18,7 @@ import bannerRoutes from './routes/banner.routes';
 import wishlistRoutes from './routes/wishlist.routes';
 import notificationRoutes from './routes/notification.routes';
 import riderRoutes from './routes/rider.routes';
+import couponRoutes from './routes/coupon.routes';
 
 const app = express();
 
@@ -41,7 +42,9 @@ app.use(cors({
       'http://localhost:3000',
       'http://localhost:3001',
     ];
-    if (!origin || allowed.includes(origin)) return cb(null, true);
+    // Allow all Vercel preview deployments for this project
+    const isVercelPreview = origin && /^https:\/\/vegu-app(-[a-z0-9-]+)?\.vercel\.app$/.test(origin);
+    if (!origin || allowed.includes(origin) || isVercelPreview) return cb(null, true);
     cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
@@ -74,6 +77,7 @@ const authLimiter = rateLimit({
 app.use('/api', apiLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/refresh', authLimiter);
 
 // Health check
 app.get('/health', (_req, res) =>
@@ -93,6 +97,7 @@ app.use('/api/banners', bannerRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/rider', riderRoutes);
+app.use('/api/coupons', couponRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

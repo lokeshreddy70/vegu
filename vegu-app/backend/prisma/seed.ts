@@ -147,6 +147,19 @@ async function main() {
   });
   console.log('✅ Banners created');
 
+  // Coupons
+  const COUPONS = [
+    { code: 'VEGU10',  description: '10% off on your order',              discountType: 'percentage', discountValue: 10,  minOrderValue: 100, maxDiscount: 50,  isActive: true },
+    { code: 'VEGU20',  description: '20% off on orders above ₹300',       discountType: 'percentage', discountValue: 20,  minOrderValue: 300, maxDiscount: 100, isActive: true },
+    { code: 'FRESH50', description: 'Flat ₹50 off on your first order',   discountType: 'flat',       discountValue: 50,  minOrderValue: 200, isActive: true },
+    { code: 'SAVE100', description: 'Flat ₹100 off on orders above ₹500', discountType: 'flat',       discountValue: 100, minOrderValue: 500, isActive: true },
+    { code: 'FREEDEL', description: '₹40 delivery fee waived on any order', discountType: 'flat',     discountValue: 40,  minOrderValue: 1,   isActive: true },
+  ];
+  for (const c of COUPONS) {
+    await prisma.coupon.upsert({ where: { code: c.code }, update: c, create: c });
+  }
+  console.log(`✅ Coupons seeded: ${COUPONS.map(c => c.code).join(', ')}`);
+
   console.log('\n🎉 Seed complete!');
   console.log('─'.repeat(40));
   console.log('Admin:    admin@vegu.app    / VeguAdmin@2024');

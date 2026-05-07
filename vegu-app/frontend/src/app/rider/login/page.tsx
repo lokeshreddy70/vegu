@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, Mail, Lock, Bike, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useAuthStore } from '@/store/auth.store';
+import { useRiderAuthStore } from '@/store/rider-auth.store';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 
@@ -47,7 +47,7 @@ export default function RiderLoginPage() {
   const [upgrading, setUpgrading] = useState(false);
 
   const router = useRouter();
-  const { setAuth, user, isAuthenticated } = useAuthStore();
+  const { setAuth, user, isAuthenticated } = useRiderAuthStore();
 
   useEffect(() => {
     if (isAuthenticated && user?.role === 'DELIVERY') {
@@ -75,7 +75,13 @@ export default function RiderLoginPage() {
         return;
       }
 
-      // Not a rider yet — offer to upgrade
+      // Admin and vendor accounts cannot use the rider portal
+      if (loggedIn.role === 'ADMIN' || loggedIn.role === 'VENDOR') {
+        toast.error('Admin and vendor accounts cannot access the rider portal.');
+        return;
+      }
+
+      // Regular customer — offer to upgrade to rider
       setUpgradeToken(accessToken);
       setUpgradeEmail(data.email);
       setUpgradePassword(data.password);

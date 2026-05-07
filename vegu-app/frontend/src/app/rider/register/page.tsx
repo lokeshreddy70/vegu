@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, Mail, Lock, User, Bike, Car, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useAuthStore } from '@/store/auth.store';
+import { useRiderAuthStore } from '@/store/rider-auth.store';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 
@@ -42,7 +42,7 @@ export default function RiderRegisterPage() {
   const [showPass, setShowPass] = useState(false);
   const [done, setDone] = useState(false);
   const router = useRouter();
-  const { setAuth, user, isAuthenticated } = useAuthStore();
+  const { setAuth, user, isAuthenticated } = useRiderAuthStore();
 
   useEffect(() => {
     if (isAuthenticated && user?.role === 'DELIVERY') {

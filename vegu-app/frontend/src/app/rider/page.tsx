@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Package, MapPin, Phone, ChevronRight, Power,
-  IndianRupee, CheckCircle2, Bike, Clock, AlertCircle,
+  IndianRupee, CheckCircle2, Bike, Clock, AlertCircle, LogOut,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api from '@/lib/api';
-import { useAuthStore } from '@/store/auth.store';
+import riderApi from '@/lib/riderApi';
+import { useRiderAuthStore } from '@/store/rider-auth.store';
 
 interface RiderDashboard {
   partner: {
@@ -55,17 +55,30 @@ const statusColors: Record<string, string> = {
 export default function RiderDashboard() {
   const router = useRouter();
   const qc = useQueryClient();
-  const { user } = useAuthStore();
+  const { user, logout } = useRiderAuthStore();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const handleLogout = async () => {
+    try {
+      const store = useRiderAuthStore.getState();
+      if (store.refreshToken) {
+        await riderApi.post('/api/auth/logout', { refreshToken: store.refreshToken }).catch(() => {});
+      }
+    } finally {
+      logout();
+      router.push('/rider/login');
+    }
+  };
 
   const { data, isLoading, error } = useQuery<RiderDashboard>({
     queryKey: ['rider-dashboard'],
-    queryFn: () => api.get('/api/rider/dashboard').then(r => r.data.data),
+    queryFn: () => riderApi.get('/api/rider/dashboard').then(r => r.data.data),
     refetchInterval: 15000,
+    refetchIntervalInBackground: false,
   });
 
   const toggleStatus = useMutation({
-    mutationFn: () => api.patch('/api/rider/toggle-status'),
+    mutationFn: () => riderApi.patch('/api/rider/toggle-status'),
     onSuccess: (res) => {
       toast.success(res.data.message);
       qc.invalidateQueries({ queryKey: ['rider-dashboard'] });
@@ -76,7 +89,7 @@ export default function RiderDashboard() {
   const acceptOrder = useMutation({
     mutationFn: (orderId: string) => {
       setUpdatingId(orderId);
-      return api.post(`/api/rider/orders/${orderId}/accept`);
+      return riderApi.post(`/api/rider/orders/${orderId}/accept`);
     },
     onSuccess: () => {
       toast.success('Order accepted!');
@@ -92,7 +105,7 @@ export default function RiderDashboard() {
 
   const updateStatus = useMutation({
     mutationFn: ({ orderId, status }: { orderId: string; status: string }) =>
-      api.patch(`/api/rider/orders/${orderId}/status`, { status }),
+      riderApi.patch(`/api/rider/orders/${orderId}/status`, { status }),
     onSuccess: (res) => {
       toast.success(res.data.message);
       qc.invalidateQueries({ queryKey: ['rider-dashboard'] });
@@ -102,7 +115,7 @@ export default function RiderDashboard() {
 
   // Register as rider if not yet
   const registerRider = useMutation({
-    mutationFn: () => api.post('/api/rider/register', { vehicleType: 'bike' }),
+    mutationFn: () => riderApi.post('/api/rider/register', { vehicleType: 'bike' }),
     onSuccess: () => {
       toast.success('Registered as rider!');
       qc.invalidateQueries({ queryKey: ['rider-dashboard'] });
@@ -164,18 +177,28 @@ export default function RiderDashboard() {
             <p className="text-green-200 text-sm">Welcome back,</p>
             <h1 className="text-xl font-bold">{user.name}</h1>
           </div>
-          <button
-            type="button"
-            onClick={() => toggleStatus.mutate()}
-            disabled={toggleStatus.isPending}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-sm transition-all ${
-              isOnline ? 'bg-white text-green-700' : 'bg-green-800 text-green-200'
-            }`}
-          >
-            <span className={`w-2 h-2 rounded-full ${statusColors[partner.status]}`} />
-            {isOnline ? 'Online' : 'Offline'}
-            <Power className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => toggleStatus.mutate()}
+              disabled={toggleStatus.isPending}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-sm transition-all ${
+                isOnline ? 'bg-white text-green-700' : 'bg-green-800 text-green-200'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${statusColors[partner.status]}`} />
+              {isOnline ? 'Online' : 'Offline'}
+              <Power className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              aria-label="Sign out"
+              className="w-9 h-9 bg-green-800 hover:bg-green-900 text-green-200 rounded-full flex items-center justify-center transition-all"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Stats */}

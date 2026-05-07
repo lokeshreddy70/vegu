@@ -1,20 +1,17 @@
 import axios from 'axios';
-import { useAuthStore } from '@/store/auth.store';
+import { useRiderAuthStore } from '@/store/rider-auth.store';
 
 const baseURL =
   typeof window === 'undefined'
     ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
     : '';
 
-const api = axios.create({
+const riderApi = axios.create({
   baseURL,
   timeout: 20000,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// ─── Refresh mutex ────────────────────────────────────────────────────────────
-// If multiple 401s arrive concurrently, only ONE refresh call is made.
-// All other failed requests queue behind it and retry with the new token.
 let isRefreshing = false;
 let refreshQueue: Array<{ resolve: (token: string) => void; reject: (err: unknown) => void }> = [];
 
@@ -25,15 +22,14 @@ function processQueue(error: unknown, token: string | null) {
   });
   refreshQueue = [];
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
-api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken;
+riderApi.interceptors.request.use((config) => {
+  const token = useRiderAuthStore.getState().accessToken;
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-api.interceptors.response.use(
+riderApi.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
@@ -42,13 +38,12 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Already refreshing — queue this request
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         refreshQueue.push({ resolve, reject });
       }).then((newToken) => {
         original.headers.Authorization = `Bearer ${newToken}`;
-        return api(original);
+        return riderApi(original);
       });
     }
 
@@ -56,21 +51,21 @@ api.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const refreshToken = useAuthStore.getState().refreshToken;
+      const refreshToken = useRiderAuthStore.getState().refreshToken;
       if (!refreshToken) throw new Error('No refresh token');
 
       const { data } = await axios.post(`${baseURL}/api/auth/refresh`, { refreshToken });
       const { accessToken: newAccess, refreshToken: newRefresh } = data.data;
 
-      useAuthStore.getState().setTokens(newAccess, newRefresh);
+      useRiderAuthStore.getState().setTokens(newAccess, newRefresh);
 
       processQueue(null, newAccess);
       original.headers.Authorization = `Bearer ${newAccess}`;
-      return api(original);
+      return riderApi(original);
     } catch (err) {
       processQueue(err, null);
-      useAuthStore.getState().logout();
-      if (typeof window !== 'undefined') window.location.href = '/login';
+      useRiderAuthStore.getState().logout();
+      if (typeof window !== 'undefined') window.location.href = '/rider/login';
       return Promise.reject(err);
     } finally {
       isRefreshing = false;
@@ -78,4 +73,4 @@ api.interceptors.response.use(
   }
 );
 
-export default api;
+export default riderApi;

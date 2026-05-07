@@ -17,8 +17,8 @@ export const config = {
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET || 'vegu-access-secret-dev-only-32chars',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'vegu-refresh-secret-dev-only-32chars',
-    accessExpires: process.env.JWT_ACCESS_EXPIRES || '15m',
-    refreshExpires: process.env.JWT_REFRESH_EXPIRES || '7d',
+    accessExpires: process.env.JWT_ACCESS_EXPIRES || '7d',
+    refreshExpires: process.env.JWT_REFRESH_EXPIRES || '30d',
   },
 
   cloudinary: {

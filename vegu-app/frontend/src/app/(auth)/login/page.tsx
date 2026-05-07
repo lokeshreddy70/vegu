@@ -102,12 +102,6 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div className="mt-6 p-4 bg-gray-50 rounded-2xl text-sm text-gray-600">
-            <p className="font-semibold text-gray-700 mb-2">Demo accounts:</p>
-            <p>🛒 Customer: customer@vegu.app / Customer@2024</p>
-            <p>🏪 Vendor: vendor@vegu.app / Vendor@2024</p>
-            <p>⚙️ Admin: admin@vegu.app / VeguAdmin@2024</p>
-          </div>
         </div>
       </motion.div>
     </div>

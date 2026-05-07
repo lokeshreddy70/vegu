@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { MapPin, CreditCard, Truck, Plus, CheckCircle } from 'lucide-react';
+import { MapPin, CreditCard, Truck, Plus, CheckCircle, Tag, X } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
@@ -32,7 +32,9 @@ export default function CheckoutPage() {
   const { items, clearCart } = useCartStore();
   const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'RAZORPAY'>('COD');
-  const [coupon, setCoupon] = useState('');
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number; description: string } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [synced, setSynced] = useState(false);
 
@@ -62,10 +64,32 @@ export default function CheckoutPage() {
 
   const subtotal = useCartSubtotal();
   const deliveryFee = subtotal >= 500 ? 0 : 40;
-  const total = subtotal + deliveryFee;
+  const discount = appliedCoupon?.discount ?? 0;
+  const total = subtotal + deliveryFee - discount;
+
+  const applyCoupon = async () => {
+    if (!couponInput.trim()) return;
+    setCouponLoading(true);
+    try {
+      const res = await api.post('/api/coupons/validate', { code: couponInput.trim(), orderTotal: subtotal });
+      const { code, discount: d, description } = res.data.data;
+      setAppliedCoupon({ code, discount: d, description });
+      toast.success(`Coupon applied! You save ${formatPrice(d)}`);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Invalid coupon code';
+      toast.error(msg);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput('');
+  };
 
   const { mutate: placeOrder, isPending } = useMutation({
-    mutationFn: () => api.post('/api/orders', { addressId: selectedAddress, paymentMethod, couponCode: coupon || undefined }),
+    mutationFn: () => api.post('/api/orders', { addressId: selectedAddress, paymentMethod, couponCode: appliedCoupon?.code }),
     onSuccess: (res) => {
       clearCart();
       toast.success('Order placed successfully!');
@@ -209,15 +233,36 @@ export default function CheckoutPage() {
               ))}
             </div>
 
-            <div className="flex gap-2 p-3 bg-gray-50 rounded-2xl">
-              <input
-                value={coupon}
-                onChange={e => setCoupon(e.target.value)}
-                placeholder="Promo code"
-                className="bg-transparent text-sm flex-1 outline-none text-gray-700 placeholder:text-gray-400"
-              />
-              <button type="button" className="text-xs font-semibold text-primary-600 hover:text-primary-700">Apply</button>
-            </div>
+            {appliedCoupon ? (
+              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-2xl">
+                <Tag className="w-4 h-4 text-green-600 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-green-700">{appliedCoupon.code}</p>
+                  <p className="text-xs text-green-600 truncate">{appliedCoupon.description}</p>
+                </div>
+                <button type="button" onClick={removeCoupon} aria-label="Remove coupon">
+                  <X className="w-4 h-4 text-green-600 hover:text-green-800" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2 p-3 bg-gray-50 rounded-2xl">
+                <input
+                  value={couponInput}
+                  onChange={e => setCouponInput(e.target.value.toUpperCase())}
+                  onKeyDown={e => e.key === 'Enter' && applyCoupon()}
+                  placeholder="Promo code"
+                  className="bg-transparent text-sm flex-1 outline-none text-gray-700 placeholder:text-gray-400 uppercase"
+                />
+                <button
+                  type="button"
+                  onClick={applyCoupon}
+                  disabled={couponLoading || !couponInput.trim()}
+                  className="text-xs font-semibold text-primary-600 hover:text-primary-700 disabled:opacity-40"
+                >
+                  {couponLoading ? '...' : 'Apply'}
+                </button>
+              </div>
+            )}
 
             <div className="border-t border-gray-100 pt-4 space-y-2 text-sm">
               <div className="flex justify-between text-gray-600">
@@ -230,6 +275,12 @@ export default function CheckoutPage() {
                   {deliveryFee === 0 ? 'FREE' : formatPrice(deliveryFee)}
                 </span>
               </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Coupon discount</span>
+                  <span className="font-semibold">−{formatPrice(discount)}</span>
+                </div>
+              )}
               <div className="flex justify-between font-bold text-base sm:text-lg border-t border-gray-100 pt-3">
                 <span>Total</span>
                 <span className="text-primary-600">{formatPrice(total)}</span>
@@ -242,7 +293,7 @@ export default function CheckoutPage() {
               disabled={!selectedAddress || items.length === 0}
               onClick={() => placeOrder()}
             >
-              Place Order — {formatPrice(total)}
+              Place Order — {formatPrice(Math.max(0, total))}
             </Button>
           </div>
         </div>

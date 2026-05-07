@@ -12,6 +12,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed-coupons": "tsx src/scripts/seed-coupons.ts",
+    "db:restore-admin": "tsx src/scripts/restore-admin.ts",
     "db:studio": "prisma studio",
     "type-check": "tsc --noEmit"
   },

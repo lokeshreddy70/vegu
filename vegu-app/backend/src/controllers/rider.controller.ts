@@ -267,6 +267,13 @@ const registerSchema = z.object({
 });
 
 export const registerAsRider = async (req: AuthRequest, res: Response): Promise<void> => {
+  // ADMIN and VENDOR accounts cannot become riders — protect privileged roles
+  const protectedRoles = ['ADMIN', 'VENDOR'];
+  if (protectedRoles.includes(req.user!.role)) {
+    sendError(res, 'Admin and vendor accounts cannot register as delivery riders', 403);
+    return;
+  }
+
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
     sendError(res, 'Invalid data', 400, parsed.error.flatten());
@@ -277,7 +284,7 @@ export const registerAsRider = async (req: AuthRequest, res: Response): Promise<
     where: { userId: req.user!.userId },
   });
   if (existing) {
-    sendError(res, 'Already registered as a rider', 400);
+    sendSuccess(res, existing, 'Already registered as a rider');
     return;
   }
 

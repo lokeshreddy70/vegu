@@ -38,7 +38,11 @@ export const placeOrder = async (req: AuthRequest, res: Response): Promise<void>
 
   if (body.couponCode) {
     const coupon = await prisma.coupon.findFirst({
-      where: { code: body.couponCode, isActive: true, expiresAt: { gt: new Date() } },
+      where: {
+        code: body.couponCode,
+        isActive: true,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
     });
     if (coupon && subtotal >= coupon.minOrderValue) {
       discount = coupon.discountType === 'percentage'
@@ -66,8 +70,9 @@ export const placeOrder = async (req: AuthRequest, res: Response): Promise<void>
       total,
       couponCode: body.couponCode,
       notes: body.notes,
+      status: 'CONFIRMED',
       estimatedDelivery: new Date(Date.now() + 30 * 60 * 1000),
-      trackingHistory: [{ status: 'PENDING', message: 'Order placed successfully', timestamp: new Date() }],
+      trackingHistory: [{ status: 'CONFIRMED', message: 'Order confirmed and looking for a rider', timestamp: new Date() }],
       items: {
         create: cartItems.map(i => ({
           productId: i.productId,
