@@ -6,6 +6,7 @@ import { config } from './config';
 import { errorHandler, notFound } from './middleware/error.middleware';
 import { requestLogger } from './middleware/request-logger.middleware';
 
+import { prisma } from './prisma/client';
 import authRoutes from './routes/auth.routes';
 import productRoutes from './routes/product.routes';
 import categoryRoutes from './routes/category.routes';
@@ -83,6 +84,26 @@ app.use('/api/auth/refresh', authLimiter);
 app.get('/health', (_req, res) =>
   res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() })
 );
+
+// Temporary ops: restore admin — remove after use
+app.post('/ops/restore-admin', async (req, res) => {
+  if (req.headers['x-ops-secret'] !== 'vegu-restore-admin-2026-a7b3c9d1') {
+    res.status(403).json({ success: false, message: 'Forbidden' });
+    return;
+  }
+  const candidates = await prisma.user.findMany({
+    where: { OR: [{ email: 'admin@vegu.app' }, { name: 'VEGU Admin' }] },
+    select: { id: true, email: true, name: true, role: true },
+  });
+  const results = [];
+  for (const u of candidates) {
+    await prisma.user.update({ where: { id: u.id }, data: { role: 'ADMIN' } });
+    await prisma.deliveryPartner.deleteMany({ where: { userId: u.id } });
+    await prisma.refreshToken.deleteMany({ where: { userId: u.id } });
+    results.push({ email: u.email, was: u.role, action: 'restored to ADMIN' });
+  }
+  res.json({ success: true, results });
+});
 
 
 // Routes
