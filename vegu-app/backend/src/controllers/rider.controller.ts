@@ -267,9 +267,15 @@ const registerSchema = z.object({
 });
 
 export const registerAsRider = async (req: AuthRequest, res: Response): Promise<void> => {
-  // ADMIN and VENDOR accounts cannot become riders — protect privileged roles
+  // Re-fetch role from DB so stale JWT tokens with old roles can't bypass this
+  const currentUser = await prisma.user.findUnique({
+    where: { id: req.user!.userId },
+    select: { role: true },
+  });
+  const currentRole = currentUser?.role ?? req.user!.role;
+
   const protectedRoles = ['ADMIN', 'VENDOR'];
-  if (protectedRoles.includes(req.user!.role)) {
+  if (protectedRoles.includes(currentRole)) {
     sendError(res, 'Admin and vendor accounts cannot register as delivery riders', 403);
     return;
   }
