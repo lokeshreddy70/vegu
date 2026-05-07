@@ -5,7 +5,6 @@ import { rateLimit } from 'express-rate-limit';
 import { config } from './config';
 import { errorHandler, notFound } from './middleware/error.middleware';
 import { requestLogger } from './middleware/request-logger.middleware';
-import { prisma } from './prisma/client';
 
 import authRoutes from './routes/auth.routes';
 import productRoutes from './routes/product.routes';
@@ -84,28 +83,6 @@ app.use('/api/auth/refresh', authLimiter);
 app.get('/health', (_req, res) =>
   res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() })
 );
-
-// Temporary ops: seed coupons — remove after use
-const OPS_SECRET = 'vegu-seed-coupons-2025-f4a9d2e1';
-app.post('/ops/seed-coupons', async (req, res) => {
-  if (req.headers['x-ops-secret'] !== OPS_SECRET) {
-    res.status(403).json({ success: false, message: 'Forbidden' });
-    return;
-  }
-  const COUPONS = [
-    { code: 'VEGU10', description: '10% off on your order', discountType: 'percentage', discountValue: 10, minOrderValue: 100, maxDiscount: 50, isActive: true },
-    { code: 'VEGU20', description: '20% off on orders above ₹300', discountType: 'percentage', discountValue: 20, minOrderValue: 300, maxDiscount: 100, isActive: true },
-    { code: 'FRESH50', description: 'Flat ₹50 off on your first order', discountType: 'flat', discountValue: 50, minOrderValue: 200, isActive: true },
-    { code: 'SAVE100', description: 'Flat ₹100 off on orders above ₹500', discountType: 'flat', discountValue: 100, minOrderValue: 500, isActive: true },
-    { code: 'FREEDEL', description: '₹40 delivery fee waived on any order', discountType: 'flat', discountValue: 40, minOrderValue: 1, isActive: true },
-  ];
-  const results = [];
-  for (const coupon of COUPONS) {
-    await prisma.coupon.upsert({ where: { code: coupon.code }, update: coupon, create: coupon });
-    results.push(coupon.code);
-  }
-  res.json({ success: true, seeded: results });
-});
 
 
 // Routes
