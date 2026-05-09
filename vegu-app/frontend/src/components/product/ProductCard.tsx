@@ -35,7 +35,7 @@ export default function ProductCard({ product }: { product: Product }) {
     if (!product.isAvailable || product.stock === 0) return;
     addItem({ id: product.id, name: product.name, slug: product.slug, price: product.price, images: product.images, unit: product.unit, stock: product.stock });
     syncAddToCart(product.id, 1);
-    toast.success(`${product.name} added!`, { style: { background: '#1A1A1A', color: '#fff', border: '1px solid #272727' } });
+    toast.success(`${product.name} added!`);
   };
 
   const handleInc = (e: React.MouseEvent) => {
@@ -55,14 +55,14 @@ export default function ProductCard({ product }: { product: Product }) {
 
   return (
     <Link href={`/products/${product.slug}`} className="block">
-      <div className="bg-app-card border border-app-border rounded-2xl overflow-hidden group">
-        <div className="relative aspect-square bg-zinc-900">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden active:scale-[0.98] transition-transform">
+        <div className="relative aspect-square bg-gray-50">
           {product.images[0] ? (
             <Image
               src={product.images[0]}
               alt={product.name}
               fill
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              className="object-cover"
               sizes="(max-width: 640px) 50vw, 25vw"
             />
           ) : (
@@ -70,48 +70,48 @@ export default function ProductCard({ product }: { product: Product }) {
           )}
           <div className="absolute top-2 left-2 flex flex-col gap-1">
             {product.discount > 0 && (
-              <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">{product.discount}% OFF</span>
+              <span className="bg-veg text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">{product.discount}% OFF</span>
             )}
             {product.isTrending && (
-              <span className="bg-orange-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-0.5">
+              <span className="bg-orange-400 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
                 <Zap className="w-2.5 h-2.5" /> Hot
               </span>
             )}
           </div>
           {product.stock === 0 && (
-            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-              <span className="bg-zinc-800 text-zinc-300 text-xs font-bold px-3 py-1 rounded-full">Out of Stock</span>
+            <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+              <span className="bg-gray-100 text-gray-400 text-xs font-bold px-3 py-1 rounded-full">Out of Stock</span>
             </div>
           )}
         </div>
 
-        <div className="p-3">
+        <div className="p-2.5">
           {product.category && (
-            <p className="text-gold text-[10px] font-bold uppercase tracking-wide mb-0.5">{product.category.name}</p>
+            <p className="text-veg text-[9px] font-bold uppercase tracking-wide mb-0.5">{product.category.name}</p>
           )}
-          <h3 className="text-white text-sm font-semibold leading-tight line-clamp-2 mb-0.5">{product.name}</h3>
-          <p className="text-zinc-600 text-xs mb-2">{product.unit}</p>
+          <h3 className="text-gray-800 text-xs font-semibold leading-tight line-clamp-2 mb-0.5">{product.name}</h3>
+          <p className="text-gray-400 text-[10px]">{product.unit}</p>
           {product.reviewCount > 0 && (
-            <div className="flex items-center gap-1 mb-2">
-              <Star className="w-3 h-3 text-gold fill-gold" />
-              <span className="text-zinc-400 text-xs">{product.rating.toFixed(1)}</span>
+            <div className="flex items-center gap-1 mt-0.5">
+              <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+              <span className="text-gray-400 text-[10px]">{product.rating.toFixed(1)}</span>
             </div>
           )}
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-1 mt-2">
             <div>
-              <span className="text-white font-bold text-sm">{formatPrice(product.price)}</span>
+              <span className="text-gray-900 font-bold text-sm">{formatPrice(product.price)}</span>
               {product.comparePrice && (
-                <span className="text-zinc-600 text-xs line-through ml-1">{formatPrice(product.comparePrice)}</span>
+                <span className="text-gray-400 text-xs line-through ml-1">{formatPrice(product.comparePrice)}</span>
               )}
             </div>
             {cartItem ? (
-              <div className="flex items-center gap-1.5 bg-zinc-800 rounded-xl px-2 py-1" onClick={e => e.preventDefault()}>
-                <button type="button" aria-label="Decrease quantity" onClick={handleDec} className="w-4 h-4 flex items-center justify-center">
-                  <Minus className="w-3 h-3 text-zinc-300" />
+              <div className="flex items-center border-2 border-veg rounded-lg overflow-hidden" onClick={e => e.preventDefault()}>
+                <button type="button" aria-label="Decrease quantity" onClick={handleDec} className="w-6 h-6 flex items-center justify-center text-veg">
+                  <Minus className="w-3 h-3" />
                 </button>
-                <span className="text-white text-xs font-bold w-4 text-center">{cartItem.quantity}</span>
-                <button type="button" aria-label="Increase quantity" onClick={handleInc} disabled={cartItem.quantity >= product.stock} className="w-4 h-4 flex items-center justify-center disabled:opacity-40">
-                  <Plus className="w-3 h-3 text-zinc-300" />
+                <span className="text-veg text-xs font-bold w-4 text-center">{cartItem.quantity}</span>
+                <button type="button" aria-label="Increase quantity" onClick={handleInc} disabled={cartItem.quantity >= product.stock} className="w-6 h-6 flex items-center justify-center bg-veg text-white disabled:opacity-40">
+                  <Plus className="w-3 h-3" />
                 </button>
               </div>
             ) : (
@@ -120,9 +120,9 @@ export default function ProductCard({ product }: { product: Product }) {
                 aria-label="Add to cart"
                 onClick={handleAdd}
                 disabled={!product.isAvailable || product.stock === 0}
-                className="w-7 h-7 bg-gold rounded-lg flex items-center justify-center disabled:opacity-40 shrink-0"
+                className="flex items-center gap-0.5 bg-veg text-white text-[10px] font-bold px-2 py-1.5 rounded-lg disabled:opacity-40 shrink-0"
               >
-                <Plus className="w-4 h-4 text-black" strokeWidth={2.5} />
+                <Plus className="w-3 h-3" strokeWidth={3} /> ADD
               </button>
             )}
           </div>

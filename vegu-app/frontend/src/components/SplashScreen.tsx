@@ -21,34 +21,29 @@ export default function SplashScreen() {
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] bg-app-bg flex flex-col items-center justify-center transition-opacity duration-500 ${
+      className={`fixed inset-0 z-[9999] bg-veg flex flex-col items-center justify-center transition-opacity duration-500 ${
         fading ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >
       <div className="flex flex-col items-center gap-5 animate-splash">
-        {/* Logo */}
         <div className="relative">
-          <div className="w-24 h-24 bg-gold rounded-[32px] flex items-center justify-center shadow-2xl shadow-gold/40">
-            <Leaf className="w-12 h-12 text-black" />
+          <div className="w-24 h-24 bg-white rounded-[32px] flex items-center justify-center shadow-2xl">
+            <Leaf className="w-12 h-12 text-veg" />
           </div>
-          {/* Glow ring */}
-          <div className="absolute inset-0 rounded-[32px] bg-gold/20 blur-xl scale-125" />
+          <div className="absolute inset-0 rounded-[32px] bg-white/20 blur-xl scale-125" />
         </div>
-
-        {/* Wordmark */}
         <div className="text-center">
           <h1 className="text-white text-5xl font-extrabold italic tracking-wide">vegú</h1>
-          <p className="text-zinc-500 text-xs font-semibold tracking-[0.25em] uppercase mt-2">
+          <p className="text-white/70 text-xs font-semibold tracking-[0.25em] uppercase mt-2">
             Fresh · Fast · Natural
           </p>
         </div>
       </div>
 
-      {/* Bottom tagline */}
       <div className="absolute bottom-12 flex items-center gap-2">
-        <div className="w-1.5 h-1.5 rounded-full bg-gold animate-bounce" style={{ animationDelay: '0ms' }} />
-        <div className="w-1.5 h-1.5 rounded-full bg-gold animate-bounce" style={{ animationDelay: '150ms' }} />
-        <div className="w-1.5 h-1.5 rounded-full bg-gold animate-bounce" style={{ animationDelay: '300ms' }} />
+        <div className="w-1.5 h-1.5 rounded-full bg-white animate-bounce bounce-delay-0" />
+        <div className="w-1.5 h-1.5 rounded-full bg-white animate-bounce bounce-delay-150" />
+        <div className="w-1.5 h-1.5 rounded-full bg-white animate-bounce bounce-delay-300" />
       </div>
     </div>
   );

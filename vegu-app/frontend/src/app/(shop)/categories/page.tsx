@@ -4,9 +4,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ChevronRight, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Search } from 'lucide-react';
 import api from '@/lib/api';
-import { useCartItemCount } from '@/store/cart.store';
 
 interface Category {
   id: string;
@@ -16,22 +15,22 @@ interface Category {
   description?: string;
 }
 
-const CATEGORY_META: Record<string, { subtitle: string; emoji: string }> = {
-  'fruits':     { subtitle: 'Fresh & Organic',        emoji: '🍎' },
-  'vegetables': { subtitle: 'Fresh & Organic',        emoji: '🥦' },
-  'dairy':      { subtitle: 'Farm Fresh Daily',        emoji: '🥛' },
-  'eggs':       { subtitle: 'Farm Fresh Daily',        emoji: '🥚' },
-  'pantry':     { subtitle: 'Essentials for You',      emoji: '🫙' },
-  'beverages':  { subtitle: 'Healthy & Refreshing',    emoji: '🧃' },
-  'personal':   { subtitle: 'Natural & Gentle',        emoji: '🧴' },
-  'care':       { subtitle: 'Natural & Gentle',        emoji: '🧴' },
-  'bakery':     { subtitle: 'Baked Fresh Daily',       emoji: '🍞' },
-  'meat':       { subtitle: 'Quality Cuts',            emoji: '🥩' },
-  'seafood':    { subtitle: 'Ocean Fresh',             emoji: '🐟' },
-  'snacks':     { subtitle: 'Tasty & Crunchy',         emoji: '🍿' },
-  'frozen':     { subtitle: 'Quick & Convenient',      emoji: '🧊' },
-  'household':  { subtitle: 'Home Essentials',         emoji: '🏠' },
-  'baby':       { subtitle: 'Safe & Gentle',           emoji: '🍼' },
+const CATEGORY_META: Record<string, { subtitle: string; emoji: string; color: string }> = {
+  'fruits':     { subtitle: 'Fresh & Organic',      emoji: '🍎', color: 'bg-red-50' },
+  'vegetables': { subtitle: 'Farm Fresh Daily',     emoji: '🥦', color: 'bg-green-50' },
+  'dairy':      { subtitle: 'Farm Fresh Dairy',     emoji: '🥛', color: 'bg-blue-50' },
+  'eggs':       { subtitle: 'Farm Fresh Eggs',      emoji: '🥚', color: 'bg-yellow-50' },
+  'pantry':     { subtitle: 'Everyday Essentials',  emoji: '🫙', color: 'bg-amber-50' },
+  'beverages':  { subtitle: 'Healthy & Refreshing', emoji: '🧃', color: 'bg-cyan-50' },
+  'personal':   { subtitle: 'Natural & Gentle',     emoji: '🧴', color: 'bg-purple-50' },
+  'care':       { subtitle: 'Natural & Gentle',     emoji: '🧴', color: 'bg-purple-50' },
+  'bakery':     { subtitle: 'Baked Fresh Daily',    emoji: '🍞', color: 'bg-orange-50' },
+  'meat':       { subtitle: 'Quality Cuts',         emoji: '🥩', color: 'bg-red-50' },
+  'seafood':    { subtitle: 'Ocean Fresh',          emoji: '🐟', color: 'bg-blue-50' },
+  'snacks':     { subtitle: 'Tasty & Crunchy',      emoji: '🍿', color: 'bg-yellow-50' },
+  'frozen':     { subtitle: 'Quick & Convenient',   emoji: '🧊', color: 'bg-sky-50' },
+  'household':  { subtitle: 'Home Essentials',      emoji: '🏠', color: 'bg-gray-50' },
+  'baby':       { subtitle: 'Safe & Gentle',        emoji: '🍼', color: 'bg-pink-50' },
 };
 
 function getMeta(slug: string, name: string) {
@@ -39,12 +38,11 @@ function getMeta(slug: string, name: string) {
   for (const [key, meta] of Object.entries(CATEGORY_META)) {
     if (lower.includes(key)) return meta;
   }
-  return { subtitle: 'Explore Now', emoji: '🛒' };
+  return { subtitle: 'Explore Now', emoji: '🛒', color: 'bg-gray-50' };
 }
 
 export default function CategoriesPage() {
   const router = useRouter();
-  const cartCount = useCartItemCount();
 
   const { data: categories = [], isLoading } = useQuery<Category[]>({
     queryKey: ['categories'],
@@ -52,56 +50,49 @@ export default function CategoriesPage() {
   });
 
   return (
-    <div className="min-h-screen bg-app-bg">
+    <div className="bg-[#F7F9FA] min-h-screen pb-24">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-12 pb-4">
-        <div className="flex items-center gap-3">
-          <button type="button" aria-label="Go back" onClick={() => router.back()} className="w-9 h-9 bg-app-card border border-app-border rounded-xl flex items-center justify-center">
-            <ArrowLeft className="w-4 h-4 text-zinc-300" />
+      <div className="bg-white border-b border-gray-100 sticky top-0 z-10">
+        <div className="flex items-center gap-3 px-4 pt-12 pb-3">
+          <button type="button" aria-label="Go back" onClick={() => router.back()} className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center">
+            <ArrowLeft className="w-4 h-4 text-gray-600" />
           </button>
-          <h1 className="text-white font-bold text-xl">Categories</h1>
+          <h1 className="text-gray-900 font-bold text-xl flex-1">All Categories</h1>
         </div>
-        <Link href="/cart" className="relative w-9 h-9 bg-app-card border border-app-border rounded-xl flex items-center justify-center">
-          <ShoppingCart className="w-4 h-4 text-zinc-300" />
-          {cartCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-gold text-black text-[10px] font-bold rounded-full flex items-center justify-center">
-              {cartCount > 9 ? '9+' : cartCount}
-            </span>
-          )}
-        </Link>
+        <div className="px-4 pb-3">
+          <Link href="/search" className="flex items-center gap-2 bg-gray-100 rounded-xl px-4 py-2.5">
+            <Search className="w-4 h-4 text-gray-400 shrink-0" />
+            <span className="text-gray-400 text-sm">Search for products...</span>
+          </Link>
+        </div>
       </div>
 
       {/* Category list */}
       {isLoading ? (
-        <div className="px-4 space-y-3">
+        <div className="px-4 mt-4 space-y-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-20 bg-app-card border border-app-border rounded-2xl animate-pulse" />
+            <div key={i} className="h-20 bg-white rounded-2xl border border-gray-100 animate-pulse" />
           ))}
         </div>
       ) : (
-        <div className="px-4 space-y-3 pb-24">
+        <div className="px-4 mt-4 space-y-2">
           {categories.map((cat) => {
             const meta = getMeta(cat.slug, cat.name);
             return (
               <Link key={cat.id} href={`/products?category=${cat.slug}`}>
-                <div className="bg-app-card border border-app-border rounded-2xl p-4 flex items-center gap-4 hover:border-zinc-600 transition-colors active:scale-[0.99]">
-                  {/* Icon / Image */}
-                  <div className="w-14 h-14 rounded-2xl bg-zinc-800 overflow-hidden shrink-0 flex items-center justify-center">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3.5 flex items-center gap-4 hover:border-veg/30 active:scale-[0.99] transition-all">
+                  <div className={`w-14 h-14 rounded-2xl ${meta.color} overflow-hidden shrink-0 flex items-center justify-center`}>
                     {cat.image ? (
                       <Image src={cat.image} alt={cat.name} width={56} height={56} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-2xl">{meta.emoji}</span>
                     )}
                   </div>
-
-                  {/* Text */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-white font-bold text-sm">{cat.name}</p>
-                    <p className="text-zinc-500 text-xs mt-0.5">{cat.description || meta.subtitle}</p>
+                    <p className="text-gray-900 font-bold text-sm">{cat.name}</p>
+                    <p className="text-gray-400 text-xs mt-0.5">{cat.description || meta.subtitle}</p>
                   </div>
-
-                  {/* Arrow */}
-                  <ChevronRight className="w-4 h-4 text-zinc-600 shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
                 </div>
               </Link>
             );

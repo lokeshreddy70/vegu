@@ -23,6 +23,7 @@ const config: Config = {
           orange: '#f97316',
           red: '#ef4444',
         },
+        veg: '#2ECC71',
         gold: {
           DEFAULT: '#C9A84C',
           light: '#D4B96A',
