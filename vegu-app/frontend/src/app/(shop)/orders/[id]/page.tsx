@@ -1,6 +1,7 @@
 'use client';
 
-import { useParams, useRouter, useEffect } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, MapPin, XCircle, Leaf, CheckCircle2 } from 'lucide-react';
