@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  getDashboard, getUsers, getUserDetail, toggleUserStatus,
+  getDashboard, getUsers, getUserDetail, toggleUserStatus, getUsersSummary,
   getVendors, updateVendorStatus,
   getProducts, createProduct, updateProduct, deleteProduct, toggleProductFeatured,
   getCategories, createCategory, updateCategory, deleteCategory,
@@ -8,6 +8,7 @@ import {
   getBanners, createBanner, updateBanner, deleteBanner,
   getCoupons, createCoupon, updateCoupon, deleteCoupon,
   getAnalytics, getInventory, updateStock,
+  getSettings, updateSettings, getLogs,
   broadcastNotification,
 } from '../controllers/admin.controller';
 import { authenticate } from '../middleware/auth.middleware';
@@ -22,6 +23,7 @@ router.get('/dashboard', asyncHandler(getDashboard));
 router.get('/analytics', asyncHandler(getAnalytics));
 
 // Users
+router.get('/users/summary', asyncHandler(getUsersSummary));
 router.get('/users', asyncHandler(getUsers));
 router.get('/users/:id', asyncHandler(getUserDetail));
 router.patch('/users/:id/toggle', asyncHandler(toggleUserStatus));
@@ -63,6 +65,13 @@ router.get('/coupons', asyncHandler(getCoupons));
 router.post('/coupons', asyncHandler(createCoupon));
 router.patch('/coupons/:id', asyncHandler(updateCoupon));
 router.delete('/coupons/:id', asyncHandler(deleteCoupon));
+
+// Settings
+router.get('/settings', asyncHandler(getSettings));
+router.patch('/settings', asyncHandler(updateSettings));
+
+// Audit Logs
+router.get('/logs', asyncHandler(getLogs));
 
 // Notifications
 router.post('/notifications/broadcast', asyncHandler(broadcastNotification));

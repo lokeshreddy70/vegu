@@ -591,6 +591,52 @@ export const updateStock = async (req: Request, res: Response): Promise<void> =>
   sendSuccess(res, { stock: product.stock, isAvailable: product.isAvailable }, 'Stock updated');
 };
 
+// ── Settings ─────────────────────────────────────────────────────────────────
+
+const SETTING_KEYS = [
+  'storeName', 'storeEmail', 'storePhone', 'storeCurrency', 'storeTimezone',
+  'minOrderAmount', 'deliveryFee', 'freeDeliveryThreshold', 'taxRate', 'maintenanceMode',
+] as const;
+
+export const getSettings = async (_req: Request, res: Response): Promise<void> => {
+  const rows = await prisma.setting.findMany();
+  const data: Record<string, string | number | boolean> = {};
+  for (const row of rows) {
+    if (row.key === 'maintenanceMode') data[row.key] = row.value === 'true';
+    else if (['minOrderAmount', 'deliveryFee', 'freeDeliveryThreshold', 'taxRate'].includes(row.key)) data[row.key] = parseFloat(row.value);
+    else data[row.key] = row.value;
+  }
+  sendSuccess(res, data, 'Settings');
+};
+
+export const updateSettings = async (req: Request, res: Response): Promise<void> => {
+  const body = req.body as Record<string, unknown>;
+  const updates = Object.entries(body)
+    .filter(([key]) => (SETTING_KEYS as readonly string[]).includes(key))
+    .map(([key, value]) => prisma.setting.upsert({
+      where: { key },
+      create: { key, value: String(value) },
+      update: { value: String(value) },
+    }));
+  await Promise.all(updates);
+  sendSuccess(res, {}, 'Settings saved');
+};
+
+// ── Audit Logs ───────────────────────────────────────────────────────────────
+
+export const getLogs = async (req: Request, res: Response): Promise<void> => {
+  // Audit logging is not yet implemented — return empty list
+  sendPaginated(res, [], 0, 1, 25);
+};
+
+// ── Users summary (by role) ───────────────────────────────────────────────────
+
+export const getUsersSummary = async (_req: Request, res: Response): Promise<void> => {
+  const byRole = await prisma.user.groupBy({ by: ['role'], _count: { id: true } });
+  const summary = Object.fromEntries(byRole.map(r => [r.role, r._count.id]));
+  sendSuccess(res, summary, 'User summary');
+};
+
 // ── Notifications ────────────────────────────────────────────────────────────
 
 export const broadcastNotification = async (req: Request, res: Response): Promise<void> => {
