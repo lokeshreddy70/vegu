@@ -53,7 +53,7 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
 
 export const getProductBySlug = async (req: Request, res: Response): Promise<void> => {
   const product = await prisma.product.findUnique({
-    where: { slug: req.params.slug },
+    where: { slug: req.params.slug, isAvailable: true },
     include: {
       category: { select: { name: true, slug: true, icon: true } },
       vendor: { select: { storeName: true, storeSlug: true, rating: true } },

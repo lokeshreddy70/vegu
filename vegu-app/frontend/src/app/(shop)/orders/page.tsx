@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -29,20 +29,30 @@ const STATUS_CONFIG: Record<string, { label: string; textColor: string; bgColor:
 export default function OrdersPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
+  const [page, setPage] = useState(1);
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
 
   useEffect(() => {
     if (!isAuthenticated) router.push('/login');
   }, [isAuthenticated, router]);
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['orders'],
-    queryFn: () => api.get('/api/orders').then(r => r.data),
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
+    queryKey: ['orders', page],
+    queryFn: () => api.get('/api/orders', { params: { page, limit: 10 } }).then(r => r.data),
     enabled: isAuthenticated,
     retry: 2,
   });
 
-  const orders: Order[] = data?.data || [];
+  useEffect(() => {
+    if (data?.data) {
+      if (page === 1) setAllOrders(data.data);
+      else setAllOrders(prev => [...prev, ...data.data]);
+    }
+  }, [data, page]);
+
+  const orders = allOrders;
   const totalOrders: number = data?.meta?.total ?? orders.length;
+  const hasMore = orders.length < totalOrders;
 
   if (isError) {
     return (
@@ -129,10 +139,15 @@ export default function OrdersPage() {
             );
           })}
 
-          {totalOrders > orders.length && (
-            <p className="text-center text-gray-400 text-xs py-4">
-              Showing {orders.length} of {totalOrders} orders
-            </p>
+          {hasMore && (
+            <button
+              type="button"
+              onClick={() => setPage(p => p + 1)}
+              disabled={isFetching}
+              className="w-full py-3.5 text-veg font-bold text-sm bg-white border border-veg/20 rounded-2xl shadow-sm disabled:opacity-50"
+            >
+              {isFetching ? 'Loading…' : `Load More (${totalOrders - orders.length} remaining)`}
+            </button>
           )}
         </div>
       )}
