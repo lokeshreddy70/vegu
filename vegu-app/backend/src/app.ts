@@ -21,6 +21,8 @@ import notificationRoutes from './routes/notification.routes';
 import riderRoutes from './routes/rider.routes';
 import couponRoutes from './routes/coupon.routes';
 import supportRoutes from './routes/support.routes';
+import kitchenRoutes from './routes/kitchen.routes';
+import trustedRiderRoutes from './routes/trusted-rider.routes';
 
 const app = express();
 
@@ -149,6 +151,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/rider', riderRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/kitchen', kitchenRoutes);
+app.use('/api/trusted-riders', trustedRiderRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

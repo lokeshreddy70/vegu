@@ -84,6 +84,8 @@ model User {
   wallet          Wallet?
   vendor          Vendor?
   deliveryPartner DeliveryPartner?
+  riderRatings    RiderRating[]
+  favoriteRiders  FavoriteRider[]
 
   loyaltyPoints Int    @default(0)
   referralCode  String @unique @default(cuid())
@@ -232,11 +234,14 @@ model DeliveryPartner {
   isVerified      Boolean        @default(false)
   status          DeliveryStatus @default(OFFLINE)
   rating          Float          @default(0)
+  ratingCount     Int            @default(0)
   totalDeliveries Int            @default(0)
   totalEarnings   Float          @default(0)
   currentLat      Float?
   currentLng      Float?
   deliveries      Order[]
+  riderRatings    RiderRating[]
+  favoritedBy     FavoriteRider[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -443,6 +448,37 @@ model Setting {
   @@map("settings")
 }
 
+
+model RiderRating {
+  id                String          @id @default(cuid())
+  userId            String
+  user              User            @relation(fields: [userId], references: [id])
+  deliveryPartnerId String
+  deliveryPartner   DeliveryPartner @relation(fields: [deliveryPartnerId], references: [id])
+  orderId           String          @unique
+  rating            Int
+  comment           String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, orderId])
+  @@index([deliveryPartnerId])
+  @@map("rider_ratings")
+}
+
+model FavoriteRider {
+  id                String          @id @default(cuid())
+  userId            String
+  user              User            @relation(fields: [userId], references: [id])
+  deliveryPartnerId String
+  deliveryPartner   DeliveryPartner @relation(fields: [deliveryPartnerId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, deliveryPartnerId])
+  @@index([userId])
+  @@map("favorite_riders")
+}
 
 model DeliveryProof {
   id          String   @id @default(cuid())

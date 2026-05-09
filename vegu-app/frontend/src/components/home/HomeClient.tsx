@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Bell, Search, Plus, Minus, ChevronRight, MapPin, Zap, Star, Tag } from 'lucide-react';
+import { Bell, Search, Plus, Minus, ChevronRight, MapPin, Zap, Star, Tag, ChefHat } from 'lucide-react';
 import LiveBazaarSection from './LiveBazaarSection';
 import ChefKitsSection from './ChefKitsSection';
+import PriceFlowSection from './PriceFlowSection';
 import { useAuthStore } from '@/store/auth.store';
 import { useCartStore } from '@/store/cart.store';
 import { syncAddToCart, syncUpdateCartItem } from '@/lib/cartSync';
@@ -244,6 +245,22 @@ export default function HomeClient({ categories, featured, trending }: {
         </div>
       </div>
 
+      {/* ── AI Kitchen entry ── */}
+      <div className="mx-4 mt-4 mb-0">
+        <Link href="/kitchen" className="flex items-center gap-4 bg-gradient-to-r from-[#2ECC71]/10 to-emerald-50 border border-[#2ECC71]/20 rounded-3xl p-4 active:scale-[0.99] transition-transform">
+          <div className="w-12 h-12 bg-veg rounded-2xl flex items-center justify-center shrink-0">
+            <ChefHat className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="text-gray-900 font-bold text-sm">AI Kitchen Assistant</p>
+            <p className="text-gray-500 text-xs mt-0.5">Ask for recipes • Auto-build your cart</p>
+          </div>
+          <div className="flex items-center gap-1 bg-veg text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl">
+            <Zap className="w-3 h-3" /> Try
+          </div>
+        </Link>
+      </div>
+
       {/* ── Live Bazaar ── */}
       <LiveBazaarSection />
 
@@ -287,6 +304,9 @@ export default function HomeClient({ categories, featured, trending }: {
           ))}
         </div>
       </div>
+
+      {/* ── Price Flow ── */}
+      <PriceFlowSection />
 
       {/* ── Deals Banner ── */}
       <div className="mx-4 mb-4">

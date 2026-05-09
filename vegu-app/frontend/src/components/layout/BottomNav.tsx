@@ -2,17 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Grid2x2, Search, Package, User, ShoppingCart } from 'lucide-react';
+import { Home, Search, Package, User, ShoppingCart, ChefHat } from 'lucide-react';
 import { useCartItemCount, useCartSubtotal } from '@/store/cart.store';
 import { cn } from '@/lib/utils';
 import { formatPrice } from '@/lib/utils';
 
 const tabs = [
-  { href: '/',           label: 'Home',       icon: Home,    exact: true },
-  { href: '/categories', label: 'Categories', icon: Grid2x2, exact: false },
-  { href: '/search',     label: 'Search',     icon: Search,  exact: false },
-  { href: '/orders',     label: 'Orders',     icon: Package, exact: false },
-  { href: '/account',    label: 'Profile',    icon: User,    exact: false },
+  { href: '/',        label: 'Home',    icon: Home,     exact: true },
+  { href: '/kitchen', label: 'Kitchen', icon: ChefHat,  exact: false },
+  { href: '/search',  label: 'Search',  icon: Search,   exact: false },
+  { href: '/orders',  label: 'Orders',  icon: Package,  exact: false },
+  { href: '/account', label: 'Profile', icon: User,     exact: false },
 ];
 
 export default function BottomNav() {

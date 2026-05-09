@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import {
   Package, MapPin, Heart, LogOut, ChevronRight, Bell,
-  Star, HelpCircle, Info, CreditCard, Edit2, Leaf,
+  Star, HelpCircle, Info, CreditCard, Edit2, Leaf, ChefHat, Shield,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
@@ -36,8 +36,10 @@ export default function AccountPage() {
   };
 
   const menuItems = [
-    { icon: Package,     label: 'My Orders',        desc: 'Track your recent orders',     href: '/orders',            color: 'bg-blue-100 text-blue-600' },
-    { icon: Heart,       label: 'Wishlist',          desc: 'Your saved products',          href: '/account/wishlist',  color: 'bg-red-100 text-red-500' },
+    { icon: Package,     label: 'My Orders',        desc: 'Track your recent orders',     href: '/orders',                   color: 'bg-blue-100 text-blue-600' },
+    { icon: ChefHat,     label: 'AI Kitchen',       desc: 'Recipes & meal plans',         href: '/kitchen',                  color: 'bg-veg/10 text-veg' },
+    { icon: Shield,      label: 'Trusted Riders',   desc: 'Your favorite delivery riders',href: '/account/favorite-riders',  color: 'bg-indigo-100 text-indigo-600' },
+    { icon: Heart,       label: 'Wishlist',          desc: 'Your saved products',          href: '/account/wishlist',         color: 'bg-red-100 text-red-500' },
     { icon: MapPin,      label: 'Addresses',         desc: 'Manage delivery addresses',    href: '/account/addresses', color: 'bg-orange-100 text-orange-500' },
     { icon: CreditCard,  label: 'Payment Methods',   desc: 'Cards & wallets',              href: '/account/payments',  color: 'bg-purple-100 text-purple-600' },
     { icon: Bell,        label: 'Notifications',     desc: 'Alerts & updates',             href: '/notifications',     color: 'bg-cyan-100 text-cyan-600' },

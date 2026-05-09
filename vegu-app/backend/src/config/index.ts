@@ -55,6 +55,10 @@ export const config = {
     keySecret: optional('RAZORPAY_KEY_SECRET', ''),
   },
 
+  anthropic: {
+    apiKey: optional('ANTHROPIC_API_KEY', ''),
+  },
+
   smtp: {
     host: optional('SMTP_HOST', 'smtp.gmail.com'),
     port: parseInt(optional('SMTP_PORT', '587')),

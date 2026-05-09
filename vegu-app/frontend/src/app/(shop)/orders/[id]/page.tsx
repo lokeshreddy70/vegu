@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, MapPin, XCircle, Leaf, CheckCircle2 } from 'lucide-react';
+import RiderRatingCard from '@/components/orders/RiderRatingCard';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatPrice, formatDate } from '@/lib/utils';
@@ -42,7 +43,7 @@ export default function OrderDetailPage() {
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', id],
-    queryFn: () => api.get(`/api/orders/${id}`).then(r => r.data.data),
+    queryFn: () => api.get(`/api/orders/${id}?include=deliveryPartner`).then(r => r.data.data),
     // Poll every 30 s while order is active
     refetchInterval: (query) => {
       const status = query.state.data?.status;
@@ -255,6 +256,15 @@ export default function OrderDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Rider rating — shows after delivery */}
+      {order.status === 'DELIVERED' && order.deliveryPartnerId && (
+        <RiderRatingCard
+          orderId={order.id}
+          deliveryPartnerId={order.deliveryPartnerId}
+          riderName={order.deliveryPartner?.user?.name}
+        />
+      )}
 
       {/* Cancel */}
       {['PENDING', 'CONFIRMED'].includes(order.status) && (
