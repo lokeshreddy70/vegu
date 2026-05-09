@@ -23,6 +23,16 @@ const config: Config = {
           orange: '#f97316',
           red: '#ef4444',
         },
+        gold: {
+          DEFAULT: '#C9A84C',
+          light: '#D4B96A',
+          dark: '#A88639',
+        },
+        app: {
+          bg: '#0C0C0C',
+          card: '#1A1A1A',
+          border: '#272727',
+        },
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
