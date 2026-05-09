@@ -1,16 +1,15 @@
 import { Router } from 'express';
-import {
-  getDashboard, getUsers, getUserDetail, toggleUserStatus, getUsersSummary,
-  getVendors, updateVendorStatus,
-  getProducts, createProduct, updateProduct, deleteProduct, toggleProductFeatured,
-  getCategories, createCategory, updateCategory, deleteCategory,
-  getOrders, getOrderDetail, updateOrderStatus,
-  getBanners, createBanner, updateBanner, deleteBanner,
-  getCoupons, createCoupon, updateCoupon, deleteCoupon,
-  getAnalytics, getInventory, updateStock,
-  getSettings, updateSettings, getLogs,
-  broadcastNotification,
-} from '../controllers/admin.controller';
+import { getDashboard, getUsersSummary, broadcastNotification } from '../controllers/admin/dashboard.controller';
+import { getUsers, getUserDetail, toggleUserStatus } from '../controllers/admin/users.controller';
+import { getVendors, updateVendorStatus } from '../controllers/admin/vendors.controller';
+import { getProducts, createProduct, updateProduct, deleteProduct, toggleProductFeatured } from '../controllers/admin/products.controller';
+import { getCategories, createCategory, updateCategory, deleteCategory } from '../controllers/admin/categories.controller';
+import { getOrders, getOrderDetail, updateOrderStatus } from '../controllers/admin/orders.controller';
+import { getBanners, createBanner, updateBanner, deleteBanner } from '../controllers/admin/banners.controller';
+import { getCoupons, createCoupon, updateCoupon, deleteCoupon } from '../controllers/admin/coupons.controller';
+import { getAnalytics } from '../controllers/admin/analytics.controller';
+import { getInventory, updateStock } from '../controllers/admin/inventory.controller';
+import { getSettings, updateSettings, getLogs } from '../controllers/admin/settings.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
