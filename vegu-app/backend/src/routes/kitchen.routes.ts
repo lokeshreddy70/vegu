@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth.middleware';
+import { optionalAuth } from '../middleware/auth.middleware';
 import { kitchenChat } from '../controllers/kitchen.controller';
 import { rateLimit } from 'express-rate-limit';
 
@@ -14,6 +14,6 @@ const kitchenLimiter = rateLimit({
   message: { success: false, message: 'Too many requests to AI kitchen, please wait.' },
 });
 
-router.post('/chat', kitchenLimiter, authenticate, kitchenChat);
+router.post('/chat', kitchenLimiter, optionalAuth, kitchenChat);
 
 export default router;

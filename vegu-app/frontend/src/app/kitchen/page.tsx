@@ -78,7 +78,20 @@ export default function KitchenPage() {
         signal: controller.signal,
       });
 
-      if (!res.ok || !res.body) throw new Error('Failed');
+      if (!res.ok || !res.body) {
+        const errMsg =
+          res.status === 401 ? "Please sign in to use AI Kitchen." :
+          res.status === 503 ? "AI Kitchen is temporarily unavailable. Please try again later." :
+          res.status === 429 ? "Too many requests. Please wait a moment and try again." :
+          "Something went wrong. Please try again.";
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { role: 'assistant', content: errMsg };
+          return updated;
+        });
+        setStreaming(false);
+        return;
+      }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();

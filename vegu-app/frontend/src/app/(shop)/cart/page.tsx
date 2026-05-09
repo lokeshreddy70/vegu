@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Trash2, Minus, Plus, Edit3, ShoppingBag, Tag } from 'lucide-react';
+import { ArrowLeft, Trash2, Minus, Plus, Edit3, ShoppingBag, Tag } from 'lucide-react'; // Tag used in free-delivery banner
 import { useCartStore, useCartSubtotal } from '@/store/cart.store';
 import { syncUpdateCartItem, syncRemoveFromCart, syncClearCart } from '@/lib/cartSync';
 import { formatPrice } from '@/lib/utils';
@@ -15,8 +15,7 @@ export default function CartPage() {
   const [note, setNote] = useState('');
 
   const deliveryFee = subtotal > 0 && subtotal < 500 ? 40 : 0;
-  const discount = subtotal > 1000 ? Math.round(subtotal * 0.05) : 0;
-  const total = subtotal + deliveryFee - discount;
+  const total = subtotal + deliveryFee;
 
   useEffect(() => { setHydrated(true); }, []);
 
@@ -150,12 +149,6 @@ export default function CartPage() {
             {deliveryFee === 0 ? 'FREE' : formatPrice(deliveryFee)}
           </span>
         </div>
-        {discount > 0 && (
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Discount (5%)</span>
-            <span className="text-veg font-semibold">−{formatPrice(discount)}</span>
-          </div>
-        )}
         <div className="border-t border-gray-100 pt-3 flex justify-between items-center">
           <span className="text-gray-900 font-bold">To Pay</span>
           <span className="text-gray-900 font-extrabold text-xl">{formatPrice(total)}</span>

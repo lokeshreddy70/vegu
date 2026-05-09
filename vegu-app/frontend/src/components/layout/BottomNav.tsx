@@ -27,8 +27,8 @@ export default function BottomNav() {
 
   return (
     <>
-      {/* Floating cart bar — visible when cart has items */}
-      {itemCount > 0 && (
+      {/* Floating cart bar — visible when cart has items, hidden on cart/checkout pages */}
+      {itemCount > 0 && pathname !== '/cart' && pathname !== '/checkout' && (
         <div className="fixed bottom-16 left-4 right-4 z-50">
           <Link
             href="/cart"
