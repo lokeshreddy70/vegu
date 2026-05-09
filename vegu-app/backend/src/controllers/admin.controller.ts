@@ -84,10 +84,11 @@ export const getDashboard = async (_req: Request, res: Response): Promise<void> 
 // ── Users ───────────────────────────────────────────────────────────────────
 
 export const getUsers = async (req: Request, res: Response): Promise<void> => {
-  const page = parseInt(req.query.page as string || '1');
+  const page = Math.max(1, parseInt(req.query.page as string || '1'));
   const limit = 20;
   const skip = (page - 1) * limit;
-  const search = req.query.search as string;
+  // Limit search string to prevent expensive full-table scans via huge inputs
+  const search = typeof req.query.search === 'string' ? req.query.search.slice(0, 100) : undefined;
   const role = req.query.role as string;
 
   const where: Record<string, unknown> = {};
@@ -168,14 +169,20 @@ export const getVendors = async (req: Request, res: Response): Promise<void> => 
 
 export const updateVendorStatus = async (req: Request, res: Response): Promise<void> => {
   const { status } = z.object({ status: z.enum(['APPROVED', 'REJECTED', 'SUSPENDED']) }).parse(req.body);
-  const vendor = await prisma.vendor.update({
-    where: { id: req.params.id },
-    data: { status, isActive: status === 'APPROVED' },
-    include: { user: { select: { name: true, email: true } } },
+
+  // Atomic: vendor status + user role must both succeed or both roll back
+  const vendor = await prisma.$transaction(async (tx) => {
+    const updated = await tx.vendor.update({
+      where: { id: req.params.id },
+      data: { status, isActive: status === 'APPROVED' },
+      include: { user: { select: { name: true, email: true, id: true } } },
+    });
+    if (status === 'APPROVED') {
+      await tx.user.update({ where: { id: updated.userId }, data: { role: 'VENDOR' } });
+    }
+    return updated;
   });
-  if (status === 'APPROVED') {
-    await prisma.user.update({ where: { id: vendor.userId }, data: { role: 'VENDOR' } });
-  }
+
   sendSuccess(res, vendor, `Vendor ${status.toLowerCase()}`);
 };
 
@@ -533,7 +540,7 @@ export const getAnalytics = async (req: Request, res: Response): Promise<void> =
     revenueByDay,
     ordersByStatus: Object.fromEntries(ordersByStatus.map(s => [s.status, s._count.id])),
     topProducts,
-    topVendors: topVendors.map(v => ({ vendorId: v.vendorId, storeName: vendorMap[v.vendorId!] || 'Unknown', revenue: v._sum.total || 0, orders: v._count.id })),
+    topVendors: topVendors.filter(v => v.vendorId != null).map(v => ({ vendorId: v.vendorId, storeName: vendorMap[v.vendorId as string] || 'Unknown', revenue: v._sum.total || 0, orders: v._count.id })),
     summary: { newCustomers, repeatCustomers, avgOrderValue: avgOrderValue._avg.total || 0 },
   });
 };

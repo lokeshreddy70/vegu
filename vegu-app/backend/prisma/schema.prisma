@@ -193,6 +193,8 @@ model Product {
   @@index([vendorId])
   @@index([slug])
   @@index([isAvailable, isFeatured])
+  @@index([stock])
+  @@index([isAvailable, stock])
   @@map("products")
 }
 
@@ -272,8 +274,11 @@ model Order {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+  @@index([vendorId])
   @@index([status])
   @@index([orderNumber])
+  @@index([createdAt])
+  @@index([status, createdAt])
   @@map("orders")
 }
 
