@@ -54,7 +54,7 @@ export const kitchenChat = async (req: AuthRequest, res: Response): Promise<void
   try {
     const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       systemInstruction: SYSTEM_PROMPT,
     });
 
