@@ -4,35 +4,61 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  MapPin, Phone, ChevronRight, Power, CheckCircle2,
-  Bike, Clock, AlertCircle, Camera, X, RotateCcw,
-  Upload, CheckCircle, Package,
+  Package, MapPin, Phone, ChevronRight, Power,
+  IndianRupee, CheckCircle2, Bike, Clock, AlertCircle, LogOut,
+  Camera, X, RotateCcw, Upload, CheckCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import riderApi from '@/lib/riderApi';
 import { useRiderAuthStore } from '@/store/rider-auth.store';
 
 interface RiderDashboard {
-  partner: { id: string; status: 'AVAILABLE' | 'OFFLINE' | 'BUSY'; totalDeliveries: number; totalEarnings: number; vehicleType: string; vehicleNo: string | null; };
+  partner: {
+    id: string;
+    status: 'AVAILABLE' | 'OFFLINE' | 'BUSY';
+    totalDeliveries: number;
+    totalEarnings: number;
+    vehicleType: string;
+    vehicleNo: string | null;
+  };
   activeOrder: ActiveOrder | null;
   todayDeliveries: number;
   pendingOrders: AvailableOrder[];
 }
+
 interface ActiveOrder {
-  id: string; orderNumber: string; status: string; total: number; deliveryFee: number;
+  id: string;
+  orderNumber: string;
+  status: string;
+  total: number;
+  deliveryFee: number;
   user: { name: string; phone: string | null };
   address: { line1: string; city: string; label: string } | null;
   items: { quantity: number; product: { name: string } }[];
 }
+
 interface AvailableOrder {
-  id: string; orderNumber: string; total: number; deliveryFee: number;
+  id: string;
+  orderNumber: string;
+  total: number;
+  deliveryFee: number;
   user: { name: string };
   address: { line1: string; city: string; label: string } | null;
   items: { quantity: number }[];
 }
 
-// ── Proof of Delivery Modal ─────────────────────────────────────────────────
-function ProofModal({ orderId, onClose, onSuccess }: { orderId: string; onClose: () => void; onSuccess: () => void }) {
+const statusColors: Record<string, string> = {
+  AVAILABLE: 'bg-green-500',
+  OFFLINE: 'bg-gray-400',
+  BUSY: 'bg-yellow-500',
+};
+
+// ── Proof of Delivery Modal ──────────────────────────────────────────────────
+function ProofModal({ orderId, onClose, onSuccess }: {
+  orderId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -40,7 +66,10 @@ function ProofModal({ orderId, onClose, onSuccess }: { orderId: string; onClose:
 
   useEffect(() => {
     if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(pos => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }), () => {});
+      navigator.geolocation.getCurrentPosition(
+        pos => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {}
+      );
     }
   }, []);
 
@@ -52,8 +81,11 @@ function ProofModal({ orderId, onClose, onSuccess }: { orderId: string; onClose:
         img.onload = () => {
           const MAX = 600;
           let { width, height } = img;
-          if (width > height) { if (width > MAX) { height = Math.round((height * MAX) / width); width = MAX; } }
-          else { if (height > MAX) { width = Math.round((width * MAX) / height); height = MAX; } }
+          if (width > height) {
+            if (width > MAX) { height = Math.round((height * MAX) / width); width = MAX; }
+          } else {
+            if (height > MAX) { width = Math.round((width * MAX) / height); height = MAX; }
+          }
           const canvas = document.createElement('canvas');
           canvas.width = width; canvas.height = height;
           canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
@@ -75,51 +107,59 @@ function ProofModal({ orderId, onClose, onSuccess }: { orderId: string; onClose:
     if (!preview) return;
     setUploading(true);
     try {
-      await riderApi.post(`/api/rider/orders/${orderId}/proof`, { imageBase64: preview, lat: location?.lat, lng: location?.lng });
-      toast.success('Delivery confirmed');
+      await riderApi.post(`/api/rider/orders/${orderId}/proof`, {
+        imageBase64: preview,
+        lat: location?.lat,
+        lng: location?.lng,
+      });
+      toast.success('Delivery confirmed!');
       onSuccess();
     } catch (err: unknown) {
       toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Upload failed');
-    } finally { setUploading(false); }
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/80 backdrop-blur-md">
-      <div className="w-full bg-[#0F0F0F] border-t border-white/[0.07] rounded-t-[32px] px-5 pt-5 pb-10 max-h-[90vh] overflow-y-auto">
-        <div className="w-10 h-1 bg-white/10 rounded-full mx-auto mb-6" />
-        <div className="flex items-center justify-between mb-6">
+    // z-[100] ensures modal sits above the bottom nav (z-50)
+    <div className="fixed inset-0 z-[100] flex items-end bg-black/70 backdrop-blur-sm">
+      <div className="w-full bg-white rounded-t-3xl px-4 pt-5 pb-10 max-h-[90vh] overflow-y-auto">
+        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+
+        <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="text-white font-bold text-lg">Proof of Delivery</h2>
-            <p className="text-white/35 text-xs mt-0.5">Photograph the delivered package</p>
+            <h2 className="text-gray-900 font-bold text-lg">Proof of Delivery</h2>
+            <p className="text-gray-500 text-xs mt-0.5">Take a photo of the delivered order</p>
           </div>
-          <button type="button" aria-label="Close" onClick={onClose} className="w-8 h-8 bg-white/[0.06] border border-white/[0.08] rounded-full flex items-center justify-center">
-            <X className="w-3.5 h-3.5 text-white/60" />
+          <button type="button" aria-label="Close" onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+            <X className="w-4 h-4 text-gray-500" />
           </button>
         </div>
 
         {preview ? (
-          <div className="relative rounded-3xl overflow-hidden mb-5 aspect-[4/3] bg-white/5">
+          <div className="relative rounded-2xl overflow-hidden mb-4 bg-gray-100 aspect-[4/3]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={preview} alt="Delivery proof" className="w-full h-full object-cover" />
-            <button type="button" onClick={() => setPreview(null)} aria-label="Retake"
-              className="absolute top-3 right-3 w-9 h-9 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center">
+            <button type="button" onClick={() => setPreview(null)} aria-label="Retake photo"
+              className="absolute top-3 right-3 w-9 h-9 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center">
               <RotateCcw className="w-4 h-4 text-white" />
             </button>
             {location && (
               <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm rounded-xl px-3 py-1.5 flex items-center gap-1.5">
-                <MapPin className="w-3 h-3 text-white/70" />
+                <MapPin className="w-3 h-3 text-green-400" />
                 <span className="text-white text-xs font-medium">Location captured</span>
               </div>
             )}
           </div>
         ) : (
           <button type="button" onClick={() => fileRef.current?.click()}
-            className="w-full border border-white/[0.07] bg-white/[0.02] rounded-3xl flex flex-col items-center justify-center py-12 mb-5 active:bg-white/[0.05] transition-colors">
-            <div className="w-14 h-14 bg-white/[0.07] rounded-2xl flex items-center justify-center mb-3">
-              <Camera className="w-7 h-7 text-white/50" />
+            className="w-full border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center py-10 mb-4 bg-gray-50 active:bg-gray-100">
+            <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center mb-3">
+              <Camera className="w-7 h-7 text-green-600" />
             </div>
-            <p className="text-white/60 font-semibold text-sm">Tap to capture</p>
-            <p className="text-white/25 text-xs mt-1">Package must be clearly visible</p>
+            <p className="text-gray-700 font-semibold text-sm">Tap to take photo</p>
+            <p className="text-gray-400 text-xs mt-1">Package must be clearly visible</p>
           </button>
         )}
 
@@ -127,14 +167,20 @@ function ProofModal({ orderId, onClose, onSuccess }: { orderId: string; onClose:
           aria-label="Capture delivery photo" title="Capture delivery photo"
           className="hidden" onChange={handleCapture} />
 
+        <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-5">
+          <p className="text-green-800 text-xs font-medium">
+            📸 Photo will be shared with the customer as delivery confirmation.
+          </p>
+        </div>
+
         {preview ? (
           <button type="button" onClick={handleSubmit} disabled={uploading}
-            className="w-full bg-white text-black font-bold py-4 rounded-2xl text-sm flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition-all">
+            className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
             {uploading ? <><Upload className="w-4 h-4 animate-pulse" /> Submitting…</> : <><CheckCircle className="w-4 h-4" /> Confirm Delivery</>}
           </button>
         ) : (
           <button type="button" onClick={() => fileRef.current?.click()}
-            className="w-full bg-white text-black font-bold py-4 rounded-2xl text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+            className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2">
             <Camera className="w-4 h-4" /> Open Camera
           </button>
         )}
@@ -173,15 +219,16 @@ export default function RiderDashboard() {
 
   const acceptOrder = useMutation({
     mutationFn: (orderId: string) => { setUpdatingId(orderId); return riderApi.post(`/api/rider/orders/${orderId}/accept`); },
-    onSuccess: () => { toast.success('Order accepted'); qc.invalidateQueries({ queryKey: ['rider-dashboard'] }); setUpdatingId(null); },
+    onSuccess: () => { toast.success('Order accepted!'); qc.invalidateQueries({ queryKey: ['rider-dashboard'] }); setUpdatingId(null); },
     onError: (err: unknown) => {
-      toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to accept');
+      toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed');
       setUpdatingId(null);
     },
   });
 
   const updateStatus = useMutation({
-    mutationFn: ({ orderId, status }: { orderId: string; status: string }) => riderApi.patch(`/api/rider/orders/${orderId}/status`, { status }),
+    mutationFn: ({ orderId, status }: { orderId: string; status: string }) =>
+      riderApi.patch(`/api/rider/orders/${orderId}/status`, { status }),
     onSuccess: (res) => { toast.success(res.data.message); qc.invalidateQueries({ queryKey: ['rider-dashboard'] }); },
     onError: () => toast.error('Failed to update status'),
   });
@@ -200,22 +247,22 @@ export default function RiderDashboard() {
   if (!user || user.role !== 'DELIVERY') return null;
 
   if (isLoading) return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" />
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
     </div>
   );
 
   if (error || !data?.partner) return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-5">
-      <div className="bg-white/[0.04] border border-white/[0.07] rounded-[28px] p-8 max-w-sm w-full text-center">
-        <div className="w-16 h-16 bg-white/[0.07] rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <Bike className="w-8 h-8 text-white/50" />
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-lg">
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Bike className="w-8 h-8 text-green-600" />
         </div>
-        <h2 className="text-white font-bold text-xl mb-2">Become a Rider</h2>
-        <p className="text-white/35 text-sm mb-6">Earn money delivering groceries</p>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Become a VEGU Rider</h2>
+        <p className="text-gray-500 text-sm mb-6">Earn money delivering groceries in your city</p>
         <button type="button" onClick={() => registerRider.mutate()} disabled={registerRider.isPending}
-          className="w-full bg-white text-black font-bold py-3.5 rounded-2xl text-sm disabled:opacity-40">
-          {registerRider.isPending ? 'Registering…' : 'Register Now'}
+          className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold disabled:opacity-50">
+          {registerRider.isPending ? 'Registering…' : 'Register as Rider'}
         </button>
       </div>
     </div>
@@ -225,110 +272,103 @@ export default function RiderDashboard() {
   const isOnline = partner.status === 'AVAILABLE';
 
   return (
-    <div className="min-h-screen bg-[#050505] pb-28">
+    <div className="min-h-screen bg-gray-50 pb-24">
 
-      {/* ── Header ─────────────────────────────────────────── */}
-      <div className="px-5 pt-14 pb-6">
-        <div className="flex items-start justify-between">
+      {/* Header */}
+      <div className="bg-green-600 text-white px-4 pt-12 pb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-white/30 text-xs font-semibold tracking-[0.2em] uppercase">Rider</p>
-            <h1 className="text-white text-2xl font-black tracking-tight mt-0.5">{user.name.split(' ')[0]}</h1>
+            <p className="text-green-200 text-sm">Welcome back,</p>
+            <h1 className="text-xl font-bold">{user.name}</h1>
           </div>
           <div className="flex items-center gap-2">
-            {/* Online toggle */}
-            <button
-              type="button"
-              onClick={() => toggleStatus.mutate()}
-              disabled={toggleStatus.isPending}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-xs tracking-wide border transition-all ${
-                isOnline
-                  ? 'bg-white/10 border-white/20 text-white'
-                  : 'bg-white/[0.03] border-white/[0.07] text-white/35'
-              }`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full transition-all ${isOnline ? 'bg-emerald-400 shadow-lg shadow-emerald-400/50' : 'bg-white/20'}`} />
-              <Power className="w-3 h-3" />
+            <button type="button" onClick={() => toggleStatus.mutate()} disabled={toggleStatus.isPending}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-sm transition-all ${
+                isOnline ? 'bg-white text-green-700' : 'bg-green-800 text-green-200'
+              }`}>
+              <span className={`w-2 h-2 rounded-full ${statusColors[partner.status]}`} />
               {isOnline ? 'Online' : 'Offline'}
+              <Power className="w-4 h-4" />
+            </button>
+            <button type="button" onClick={handleLogout} aria-label="Sign out"
+              className="w-9 h-9 bg-green-800 hover:bg-green-900 text-green-200 rounded-full flex items-center justify-center transition-all">
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Stats row */}
-        <div className="grid grid-cols-3 gap-2.5 mt-5">
+        <div className="grid grid-cols-3 gap-3">
           {[
-            { label: 'Today', value: todayDeliveries, unit: 'trips' },
-            { label: 'All time', value: partner.totalDeliveries, unit: 'deliveries' },
-            { label: 'Earned', value: `₹${partner.totalEarnings}`, unit: 'total' },
+            { label: 'Today', value: todayDeliveries, unit: 'deliveries' },
+            { label: 'Total', value: partner.totalDeliveries, unit: 'completed' },
+            { label: 'Earnings', value: `₹${partner.totalEarnings}`, unit: 'total' },
           ].map(s => (
-            <div key={s.label} className="bg-white/[0.04] border border-white/[0.06] rounded-2xl p-3">
-              <p className="text-white/30 text-[9px] font-semibold tracking-widest uppercase">{s.label}</p>
-              <p className="text-white font-black text-xl leading-tight mt-1">{s.value}</p>
-              <p className="text-white/20 text-[9px] mt-0.5">{s.unit}</p>
+            <div key={s.label} className="bg-green-700 rounded-xl p-3 text-center">
+              <p className="text-green-200 text-xs">{s.label}</p>
+              <p className="text-white font-bold text-lg">{s.value}</p>
+              <p className="text-green-200 text-xs">{s.unit}</p>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="px-5 space-y-4">
+      <div className="px-4 mt-4 space-y-4">
 
-        {/* ── Active Order ──────────────────────────────────── */}
+        {/* Active Order */}
         {activeOrder && (
-          <div className="bg-white/[0.05] border border-white/10 rounded-3xl overflow-hidden">
-            {/* Top bar */}
-            <div className="px-4 py-3 border-b border-white/[0.06] flex items-center gap-2.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-lg shadow-emerald-400/50" />
-              <span className="text-emerald-400 text-xs font-bold tracking-wide uppercase">Active Delivery</span>
-              <span className="ml-auto text-white/25 text-xs font-mono">#{activeOrder.orderNumber}</span>
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden border-2 border-green-500">
+            <div className="bg-green-50 px-4 py-3 flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="font-semibold text-green-700 text-sm">Active Delivery</span>
+              <span className="ml-auto text-xs text-gray-500">#{activeOrder.orderNumber}</span>
             </div>
 
             <div className="p-4 space-y-3">
-              {/* Customer */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white font-bold">{activeOrder.user.name}</p>
-                  <p className="text-white/40 text-xs mt-0.5">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <Package className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900">{activeOrder.user.name}</p>
+                  <p className="text-gray-500 text-sm truncate">
                     {activeOrder.items.slice(0, 2).map(i => i.product.name).join(', ')}
                     {activeOrder.items.length > 2 && ` +${activeOrder.items.length - 2}`}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-white font-black text-lg">₹{activeOrder.total}</p>
-                  <p className="text-white/40 text-xs">+₹{activeOrder.deliveryFee} fee</p>
+                  <p className="font-bold text-gray-900">₹{activeOrder.total}</p>
+                  <p className="text-xs text-green-600 font-medium">+₹{activeOrder.deliveryFee} fee</p>
                 </div>
               </div>
 
-              {/* Address */}
               {activeOrder.address && (
                 <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${activeOrder.address.line1}, ${activeOrder.address.city}`)}`}
                   target="_blank" rel="noreferrer"
-                  className="flex items-center gap-3 bg-white/[0.04] border border-white/[0.06] rounded-2xl p-3">
-                  <MapPin className="w-4 h-4 text-white/40 shrink-0" />
-                  <span className="text-white/60 text-sm flex-1 truncate">{activeOrder.address.line1}, {activeOrder.address.city}</span>
-                  <ChevronRight className="w-4 h-4 text-white/20 shrink-0" />
+                  className="flex items-center gap-2 bg-gray-50 rounded-xl p-3">
+                  <MapPin className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  <span className="text-sm text-gray-700 flex-1">{activeOrder.address.line1}, {activeOrder.address.city}</span>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
                 </a>
               )}
 
-              {/* Call customer */}
               {activeOrder.user.phone && (
-                <a href={`tel:${activeOrder.user.phone}`}
-                  className="flex items-center gap-3 bg-white/[0.04] border border-white/[0.06] rounded-2xl p-3">
-                  <Phone className="w-4 h-4 text-white/40 shrink-0" />
-                  <span className="text-white/60 text-sm">Call {activeOrder.user.name}</span>
+                <a href={`tel:${activeOrder.user.phone}`} className="flex items-center gap-2 bg-blue-50 rounded-xl p-3">
+                  <Phone className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm text-blue-700 font-medium">Call {activeOrder.user.name}</span>
                 </a>
               )}
 
-              {/* Action buttons */}
               {activeOrder.status === 'CONFIRMED' && (
                 <button type="button"
                   onClick={() => updateStatus.mutate({ orderId: activeOrder.id, status: 'OUT_FOR_DELIVERY' })}
                   disabled={updateStatus.isPending}
-                  className="w-full bg-white text-black font-bold py-3.5 rounded-2xl text-sm disabled:opacity-40 active:scale-[0.98] transition-all">
+                  className="w-full bg-yellow-500 text-white py-3 rounded-xl font-semibold text-sm disabled:opacity-50">
                   {updateStatus.isPending ? 'Updating…' : 'Mark as Picked Up'}
                 </button>
               )}
               {activeOrder.status === 'OUT_FOR_DELIVERY' && (
                 <button type="button" onClick={() => setProofOrderId(activeOrder.id)}
-                  className="w-full bg-white text-black font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+                  className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
                   <CheckCircle2 className="w-4 h-4" /> Mark as Delivered
                 </button>
               )}
@@ -336,73 +376,86 @@ export default function RiderDashboard() {
           </div>
         )}
 
-        {/* ── Available Orders ──────────────────────────────── */}
+        {/* Available Orders */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-white/50 text-xs font-semibold tracking-[0.15em] uppercase">Incoming</p>
-            <span className="text-white/25 text-xs bg-white/[0.04] border border-white/[0.06] px-2.5 py-1 rounded-full">
-              {pendingOrders.length} nearby
-            </span>
+            <h2 className="font-bold text-gray-900">Available Orders</h2>
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{pendingOrders.length} nearby</span>
           </div>
 
           {!isOnline && (
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4 flex items-start gap-3">
-              <AlertCircle className="w-4 h-4 text-white/25 shrink-0 mt-0.5" />
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-white/50 text-sm font-semibold">You are offline</p>
-                <p className="text-white/25 text-xs mt-0.5">Go online to receive orders</p>
+                <p className="font-medium text-yellow-800 text-sm">You are offline</p>
+                <p className="text-yellow-600 text-xs">Go online to accept delivery orders</p>
               </div>
             </div>
           )}
 
           {isOnline && pendingOrders.length === 0 && !activeOrder && (
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8 flex flex-col items-center text-center">
-              <Clock className="w-8 h-8 text-white/15 mb-3" />
-              <p className="text-white/30 text-sm">No orders right now</p>
-              <p className="text-white/15 text-xs mt-1">New orders appear automatically</p>
+            <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
+              <Clock className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">No orders available right now</p>
+              <p className="text-gray-400 text-sm">New orders will appear here automatically</p>
             </div>
           )}
 
           {isOnline && !activeOrder && pendingOrders.map(order => (
-            <div key={order.id} className="bg-white/[0.04] border border-white/[0.06] rounded-2xl p-4 mb-3">
+            <div key={order.id} className="bg-white rounded-2xl shadow-sm p-4 mb-3">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <p className="text-white font-bold font-mono text-sm">#{order.orderNumber}</p>
-                  <p className="text-white/40 text-xs mt-0.5">{order.user.name} · {order.items.reduce((s, i) => s + i.quantity, 0)} items</p>
+                  <p className="font-semibold text-gray-900">#{order.orderNumber}</p>
+                  <p className="text-gray-500 text-sm">{order.user.name}</p>
+                  <p className="text-xs text-gray-400">{order.items.reduce((s, i) => s + i.quantity, 0)} items</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-white font-black">₹{order.total}</p>
-                  <p className="text-white/40 text-xs">+₹{order.deliveryFee}</p>
+                  <p className="font-bold text-gray-900">₹{order.total}</p>
+                  <p className="text-xs text-green-600 font-semibold">+₹{order.deliveryFee} earn</p>
                 </div>
               </div>
 
               {order.address && (
-                <div className="flex items-center gap-2 text-xs text-white/30 mb-3">
-                  <MapPin className="w-3 h-3 shrink-0" />
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                  <MapPin className="w-4 h-4 text-red-400 flex-shrink-0" />
                   <span className="truncate">{order.address.line1}, {order.address.city}</span>
                 </div>
               )}
 
               <button type="button" onClick={() => acceptOrder.mutate(order.id)}
                 disabled={acceptOrder.isPending && updatingId === order.id}
-                className="w-full bg-white text-black font-bold py-3 rounded-2xl text-sm disabled:opacity-40 active:scale-[0.98] transition-all">
+                className="w-full bg-green-600 text-white py-2.5 rounded-xl font-semibold text-sm disabled:opacity-50">
                 {acceptOrder.isPending && updatingId === order.id ? 'Accepting…' : 'Accept Order'}
               </button>
             </div>
           ))}
         </div>
 
-        {/* ── Logout ───────────────────────────────────────── */}
-        <div className="pt-2">
-          <button type="button" onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-3 text-white/20 text-xs font-semibold tracking-wide hover:text-white/40 transition-colors">
-            <Package className="w-3.5 h-3.5" />
-            Sign out of rider account
-          </button>
+        {/* Earnings summary */}
+        <div className="bg-white rounded-2xl shadow-sm p-4">
+          <h2 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+            <IndianRupee className="w-4 h-4 text-green-600" />
+            Earnings Summary
+          </h2>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between text-gray-600">
+              <span>Total deliveries</span>
+              <span className="font-semibold text-gray-900">{partner.totalDeliveries}</span>
+            </div>
+            <div className="flex justify-between text-gray-600">
+              <span>Total earned</span>
+              <span className="font-semibold text-green-600">₹{partner.totalEarnings}</span>
+            </div>
+            <div className="flex justify-between text-gray-600">
+              <span>Vehicle</span>
+              <span className="font-semibold text-gray-900 capitalize">
+                {partner.vehicleType}{partner.vehicleNo ? ` (${partner.vehicleNo})` : ''}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* POD modal */}
       {proofOrderId && (
         <ProofModal orderId={proofOrderId} onClose={() => setProofOrderId(null)}
           onSuccess={() => { setProofOrderId(null); qc.invalidateQueries({ queryKey: ['rider-dashboard'] }); }} />

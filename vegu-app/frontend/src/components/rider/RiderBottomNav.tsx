@@ -17,8 +17,8 @@ export default function RiderBottomNav() {
     tab.exact ? pathname === tab.href : pathname.startsWith(tab.href);
 
   return (
-    <nav className="fixed bottom-5 left-4 right-4 z-50">
-      <div className="bg-[#111111]/90 backdrop-blur-2xl border border-white/[0.07] rounded-[30px] px-3 py-2.5 flex items-center justify-around shadow-2xl">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 shadow-lg">
+      <div className="flex items-center justify-around px-2 py-2 safe-area-bottom">
         {tabs.map((tab) => {
           const active = isActive(tab);
           const Icon = tab.icon;
@@ -26,20 +26,20 @@ export default function RiderBottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
-              className="flex flex-col items-center gap-1 flex-1 py-1 group"
+              className="flex flex-col items-center gap-1 flex-1 py-1.5"
             >
               <div className={cn(
-                'w-11 h-8 flex items-center justify-center rounded-2xl transition-all duration-300',
-                active ? 'bg-white/10' : 'group-active:bg-white/5'
+                'w-11 h-8 flex items-center justify-center rounded-xl transition-all',
+                active ? 'bg-green-50' : ''
               )}>
                 <Icon
-                  className={cn('w-[18px] h-[18px] transition-all duration-300', active ? 'text-white' : 'text-white/25')}
-                  strokeWidth={active ? 2.2 : 1.5}
+                  className={cn('w-5 h-5 transition-all', active ? 'text-green-600' : 'text-gray-400')}
+                  strokeWidth={active ? 2.5 : 1.8}
                 />
               </div>
               <span className={cn(
-                'text-[9px] font-semibold tracking-[0.12em] uppercase transition-all duration-300',
-                active ? 'text-white/80' : 'text-white/20'
+                'text-[10px] font-semibold tracking-wide transition-all',
+                active ? 'text-green-600' : 'text-gray-400'
               )}>
                 {tab.label}
               </span>

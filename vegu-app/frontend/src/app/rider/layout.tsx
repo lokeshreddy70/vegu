@@ -9,7 +9,7 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
   const isAuthPage = pathname === '/rider/login' || pathname === '/rider/register';
 
   return (
-    <div className="min-h-screen bg-[#050505]">
+    <div className="min-h-screen bg-gray-50">
       <ErrorBoundary portal="rider">{children}</ErrorBoundary>
       {!isAuthPage && <RiderBottomNav />}
     </div>
