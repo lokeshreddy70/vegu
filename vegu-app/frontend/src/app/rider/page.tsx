@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Package, MapPin, Phone, ChevronRight, Power,
   IndianRupee, CheckCircle2, Bike, Clock, AlertCircle, LogOut,
+  Camera, X, RotateCcw, Upload, CheckCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import riderApi from '@/lib/riderApi';
@@ -52,11 +53,190 @@ const statusColors: Record<string, string> = {
   BUSY: 'bg-yellow-500',
 };
 
+// ── Proof of Delivery Modal ──────────────────────────────────────────────────
+function ProofModal({ orderId, onClose, onSuccess }: {
+  orderId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [preview, setPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [location, setLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // Get location when modal opens
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        pos => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {}
+      );
+    }
+  }, []);
+
+  const compressImage = useCallback((file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = document.createElement('img');
+        img.onload = () => {
+          const MAX = 600;
+          let { width, height } = img;
+          if (width > height) {
+            if (width > MAX) { height = Math.round((height * MAX) / width); width = MAX; }
+          } else {
+            if (height > MAX) { width = Math.round((width * MAX) / height); height = MAX; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext('2d')!;
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.75));
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  const handleCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const compressed = await compressImage(file);
+    setPreview(compressed);
+  };
+
+  const handleSubmit = async () => {
+    if (!preview) return;
+    setUploading(true);
+    try {
+      await riderApi.post(`/api/rider/orders/${orderId}/proof`, {
+        imageBase64: preview,
+        lat: location?.lat,
+        lng: location?.lng,
+        address: location?.address,
+      });
+      toast.success('Delivery confirmed! Great job! 🎉');
+      onSuccess();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to submit proof';
+      toast.error(msg);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end bg-black/70 backdrop-blur-sm">
+      <div className="w-full bg-white rounded-t-3xl px-4 pt-5 pb-8 max-h-[90vh] overflow-y-auto">
+        {/* Handle */}
+        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-gray-900 font-bold text-lg">Proof of Delivery</h2>
+            <p className="text-gray-500 text-xs mt-0.5">Take a photo of the delivered order</p>
+          </div>
+          <button type="button" aria-label="Close" onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+            <X className="w-4 h-4 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Image area */}
+        {preview ? (
+          <div className="relative rounded-2xl overflow-hidden mb-4 bg-gray-100 aspect-[4/3]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={preview} alt="Delivery proof" className="w-full h-full object-cover" />
+            <button
+              type="button"
+              onClick={() => setPreview(null)}
+              aria-label="Retake photo"
+              className="absolute top-3 right-3 w-9 h-9 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center"
+            >
+              <RotateCcw className="w-4 h-4 text-white" />
+            </button>
+            {location && (
+              <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm rounded-xl px-3 py-1.5 flex items-center gap-1.5">
+                <MapPin className="w-3 h-3 text-green-400" />
+                <span className="text-white text-xs font-medium">Location captured</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="w-full border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center py-10 mb-4 bg-gray-50 active:bg-gray-100"
+          >
+            <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center mb-3">
+              <Camera className="w-7 h-7 text-green-600" />
+            </div>
+            <p className="text-gray-700 font-semibold text-sm">Tap to take photo</p>
+            <p className="text-gray-400 text-xs mt-1">Photo of package at delivery location</p>
+          </button>
+        )}
+
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          aria-label="Capture delivery photo"
+          title="Capture delivery photo"
+          className="hidden"
+          onChange={handleCapture}
+        />
+
+        {/* Info */}
+        <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-5">
+          <p className="text-green-800 text-xs font-medium">
+            📸 The photo will be shared with the customer and admin as delivery confirmation.
+            Ensure the package is clearly visible.
+          </p>
+        </div>
+
+        {/* Action buttons */}
+        {preview ? (
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={uploading}
+            className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {uploading ? (
+              <>
+                <Upload className="w-4 h-4 animate-pulse" />
+                Submitting proof…
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                Confirm Delivery
+              </>
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
+          >
+            <Camera className="w-4 h-4" />
+            Open Camera
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function RiderDashboard() {
   const router = useRouter();
   const qc = useQueryClient();
   const { user, logout } = useRiderAuthStore();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [proofOrderId, setProofOrderId] = useState<string | null>(null);
 
   const handleLogout = async () => {
     try {
@@ -291,12 +471,11 @@ export default function RiderDashboard() {
                 {activeOrder.status === 'OUT_FOR_DELIVERY' && (
                   <button
                     type="button"
-                    onClick={() => updateStatus.mutate({ orderId: activeOrder.id, status: 'DELIVERED' })}
-                    disabled={updateStatus.isPending}
-                    className="col-span-2 bg-green-600 text-white py-3 rounded-xl font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                    onClick={() => setProofOrderId(activeOrder.id)}
+                    className="col-span-2 bg-green-600 text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    {updateStatus.isPending ? 'Updating...' : 'Mark as Delivered'}
+                    Mark as Delivered
                   </button>
                 )}
               </div>
@@ -390,6 +569,18 @@ export default function RiderDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Proof of Delivery modal */}
+      {proofOrderId && (
+        <ProofModal
+          orderId={proofOrderId}
+          onClose={() => setProofOrderId(null)}
+          onSuccess={() => {
+            setProofOrderId(null);
+            qc.invalidateQueries({ queryKey: ['rider-dashboard'] });
+          }}
+        />
+      )}
     </div>
   );
 }

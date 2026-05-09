@@ -20,6 +20,7 @@ import wishlistRoutes from './routes/wishlist.routes';
 import notificationRoutes from './routes/notification.routes';
 import riderRoutes from './routes/rider.routes';
 import couponRoutes from './routes/coupon.routes';
+import supportRoutes from './routes/support.routes';
 
 const app = express();
 
@@ -147,6 +148,7 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/rider', riderRoutes);
 app.use('/api/coupons', couponRoutes);
+app.use('/api/support', supportRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

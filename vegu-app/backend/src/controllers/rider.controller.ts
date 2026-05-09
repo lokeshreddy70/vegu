@@ -259,6 +259,73 @@ export const toggleStatus = async (req: AuthRequest, res: Response): Promise<voi
   }
 };
 
+// ── Submit Proof of Delivery ────────────────────────────────────────────────
+
+const proofSchema = z.object({
+  imageBase64: z.string().min(100, 'Image required'),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
+  address: z.string().optional(),
+});
+
+export const submitProof = async (req: AuthRequest, res: Response): Promise<void> => {
+  const parsed = proofSchema.safeParse(req.body);
+  if (!parsed.success) {
+    sendError(res, 'Invalid proof data', 400, parsed.error.flatten());
+    return;
+  }
+
+  try {
+    const partner = await getPartner(req.user!.userId);
+    const { imageBase64, lat, lng, address } = parsed.data;
+
+    const order = await prisma.order.findFirst({
+      where: { id: req.params.id, deliveryPartnerId: partner.id, status: 'OUT_FOR_DELIVERY' },
+    });
+
+    if (!order) {
+      sendError(res, 'Order not found or not ready for proof submission', 404);
+      return;
+    }
+
+    // Check if proof already submitted
+    const existing = await prisma.deliveryProof.findUnique({ where: { orderId: order.id } });
+    if (existing) {
+      sendError(res, 'Proof already submitted for this order', 409);
+      return;
+    }
+
+    await prisma.$transaction([
+      prisma.deliveryProof.create({
+        data: { orderId: order.id, riderId: req.user!.userId, imageBase64, lat, lng, address },
+      }),
+      prisma.order.update({
+        where: { id: order.id },
+        data: {
+          status: 'DELIVERED',
+          deliveredAt: new Date(),
+          trackingHistory: {
+            push: { status: 'DELIVERED', timestamp: new Date().toISOString(), note: 'Proof submitted by rider' },
+          },
+        },
+      }),
+      prisma.deliveryPartner.update({
+        where: { id: partner.id },
+        data: {
+          totalDeliveries: { increment: 1 },
+          totalEarnings: { increment: order.deliveryFee },
+          status: 'AVAILABLE',
+        },
+      }),
+    ]);
+
+    sendSuccess(res, {}, 'Delivery confirmed with proof');
+  } catch (err) {
+    if ((err as Error).message === 'NOT_FOUND') sendError(res, 'Rider profile not found', 404);
+    else sendError(res, 'Failed to submit proof', 500);
+  }
+};
+
 // ── Register as rider ───────────────────────────────────────────────────────
 
 const registerSchema = z.object({

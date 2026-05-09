@@ -442,3 +442,17 @@ model Setting {
 
   @@map("settings")
 }
+
+
+model DeliveryProof {
+  id          String   @id @default(cuid())
+  orderId     String   @unique
+  riderId     String
+  imageBase64 String   @db.Text
+  lat         Float?
+  lng         Float?
+  address     String?
+  capturedAt  DateTime @default(now())
+
+  @@map("delivery_proofs")
+}

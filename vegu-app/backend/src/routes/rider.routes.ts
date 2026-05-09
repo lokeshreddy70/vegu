@@ -6,6 +6,7 @@ import {
   getAvailableOrders,
   acceptOrder,
   updateOrderStatus,
+  submitProof,
   updateLocation,
   toggleStatus,
   registerAsRider,
@@ -24,6 +25,7 @@ router.get('/orders', getMyOrders);
 router.get('/orders/available', getAvailableOrders);
 router.post('/orders/:id/accept', acceptOrder);
 router.patch('/orders/:id/status', updateOrderStatus);
+router.post('/orders/:id/proof', submitProof);
 router.patch('/location', updateLocation);
 router.patch('/toggle-status', toggleStatus);
 
