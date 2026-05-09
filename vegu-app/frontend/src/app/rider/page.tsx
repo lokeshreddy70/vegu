@@ -349,7 +349,7 @@ export default function RiderDashboard() {
   const isOnline = partner.status === 'AVAILABLE';
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
       <div className="bg-green-600 text-white px-4 pt-12 pb-6">
         <div className="flex items-center justify-between mb-4">
