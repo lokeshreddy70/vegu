@@ -10,6 +10,7 @@ import { useCartStore, useCartSubtotal } from '@/store/cart.store';
 import { useAuthStore } from '@/store/auth.store';
 import { pushLocalCartToDB } from '@/lib/cartSync';
 import { formatPrice } from '@/lib/utils';
+import { useHydrated } from '@/hooks/useHydrated';
 
 interface Address {
   id: string;
@@ -33,10 +34,8 @@ export default function CheckoutPage() {
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number; description: string } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
+  const hydrated = useHydrated();
   const [synced, setSynced] = useState(false);
-
-  useEffect(() => { setHydrated(true); }, []);
 
   useEffect(() => {
     if (!hydrated) return;

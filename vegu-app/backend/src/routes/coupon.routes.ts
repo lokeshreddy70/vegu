@@ -3,13 +3,13 @@ import { z } from 'zod';
 import { prisma } from '../prisma/client';
 import { sendSuccess, sendError } from '../utils/response';
 import { authenticate } from '../middleware/auth.middleware';
+import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
-// Validate a coupon code (used by checkout)
-router.post('/validate', authenticate, async (req: Request, res: Response) => {
+router.post('/validate', authenticate, asyncHandler(async (req: Request, res: Response) => {
   const parsed = z.object({
-    code: z.string(),
+    code: z.string().min(1).max(50),
     orderTotal: z.number().positive(),
   }).safeParse(req.body);
 
@@ -54,10 +54,9 @@ router.post('/validate', authenticate, async (req: Request, res: Response) => {
     discountValue: coupon.discountValue,
     discount: Math.round(discount * 100) / 100,
   }, 'Coupon applied');
-});
+}));
 
-// List all active coupons (public — let customers see what's available)
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', asyncHandler(async (_req: Request, res: Response) => {
   const coupons = await prisma.coupon.findMany({
     where: {
       isActive: true,
@@ -73,6 +72,6 @@ router.get('/', async (_req: Request, res: Response) => {
     },
   });
   sendSuccess(res, coupons);
-});
+}));
 
 export default router;

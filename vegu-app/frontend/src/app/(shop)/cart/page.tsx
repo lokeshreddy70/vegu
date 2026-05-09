@@ -1,23 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Trash2, Minus, Plus, Edit3, ShoppingBag, Tag } from 'lucide-react'; // Tag used in free-delivery banner
 import { useCartStore, useCartSubtotal } from '@/store/cart.store';
 import { syncUpdateCartItem, syncRemoveFromCart, syncClearCart } from '@/lib/cartSync';
 import { formatPrice } from '@/lib/utils';
+import { useHydrated } from '@/hooks/useHydrated';
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, clearCart } = useCartStore();
   const subtotal = useCartSubtotal();
-  const [hydrated, setHydrated] = useState(false);
+  const hydrated = useHydrated();
   const [note, setNote] = useState('');
 
   const deliveryFee = subtotal > 0 && subtotal < 500 ? 40 : 0;
   const total = subtotal + deliveryFee;
-
-  useEffect(() => { setHydrated(true); }, []);
 
   const handleUpdateQty = (productId: string, qty: number) => {
     updateQuantity(productId, qty);

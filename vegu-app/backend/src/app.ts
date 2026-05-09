@@ -1,7 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import { rateLimit } from 'express-rate-limit';
+import { randomUUID } from 'crypto';
 import { config } from './config';
 import { errorHandler, notFound } from './middleware/error.middleware';
 import { requestLogger } from './middleware/request-logger.middleware';
@@ -25,6 +27,15 @@ import kitchenRoutes from './routes/kitchen.routes';
 import trustedRiderRoutes from './routes/trusted-rider.routes';
 
 const app = express();
+
+// ── Request ID — attach a unique ID to every request for tracing ──────────────
+app.use((_req, res, next) => {
+  res.setHeader('X-Request-Id', randomUUID());
+  next();
+});
+
+// ── Compression — gzip/brotli before anything writes a response body ──────────
+app.use(compression());
 
 // ── Security headers ──────────────────────────────────────────────────────────
 app.use(helmet({

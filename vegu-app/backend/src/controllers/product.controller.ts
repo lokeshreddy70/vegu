@@ -6,8 +6,8 @@ import { AuthRequest, ProductQuery } from '../types';
 
 export const getProducts = async (req: Request, res: Response): Promise<void> => {
   const q = req.query as ProductQuery;
-  const page = parseInt(q.page || '1');
-  const limit = Math.min(parseInt(q.limit || '20'), 50);
+  const page = Math.max(1, parseInt(q.page || '1') || 1);
+  const limit = Math.min(Math.max(1, parseInt(q.limit || '20') || 20), 50);
   const skip = (page - 1) * limit;
 
   const where: Record<string, unknown> = { isAvailable: true };

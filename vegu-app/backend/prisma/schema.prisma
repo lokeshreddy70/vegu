@@ -203,7 +203,7 @@ model Product {
 model Vendor {
   id          String       @id @default(cuid())
   userId      String       @unique
-  user        User         @relation(fields: [userId], references: [id])
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   storeName   String
   storeSlug   String       @unique
   description String?
@@ -228,7 +228,7 @@ model Vendor {
 model DeliveryPartner {
   id              String         @id @default(cuid())
   userId          String         @unique
-  user            User           @relation(fields: [userId], references: [id])
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   vehicleType     String         @default("bike")
   vehicleNo       String?
   isVerified      Boolean        @default(false)
@@ -284,6 +284,7 @@ model Order {
   @@index([vendorId])
   @@index([status])
   @@index([orderNumber])
+  @@index([paymentId])
   @@index([createdAt])
   @@index([status, createdAt])
   @@map("orders")
@@ -310,7 +311,7 @@ model CartItem {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   quantity  Int      @default(1)
   createdAt DateTime @default(now())
 
@@ -323,7 +324,7 @@ model WishlistItem {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@unique([userId, productId])
@@ -333,9 +334,9 @@ model WishlistItem {
 model Review {
   id         String  @id @default(cuid())
   userId     String
-  user       User    @relation(fields: [userId], references: [id])
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   productId  String
-  product    Product @relation(fields: [productId], references: [id])
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   rating     Int
   title      String?
   comment    String?
@@ -371,7 +372,7 @@ model Coupon {
 model Wallet {
   id           String        @id @default(cuid())
   userId       String        @unique
-  user         User          @relation(fields: [userId], references: [id])
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   balance      Float         @default(0)
   transactions Transaction[]
 
@@ -384,7 +385,7 @@ model Wallet {
 model VendorWallet {
   id           String        @id @default(cuid())
   vendorId     String        @unique
-  vendor       Vendor        @relation(fields: [vendorId], references: [id])
+  vendor       Vendor        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   balance      Float         @default(0)
   totalEarned  Float         @default(0)
   transactions Transaction[]
@@ -454,9 +455,9 @@ model Setting {
 model RiderRating {
   id                String          @id @default(cuid())
   userId            String
-  user              User            @relation(fields: [userId], references: [id])
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveryPartnerId String
-  deliveryPartner   DeliveryPartner @relation(fields: [deliveryPartnerId], references: [id])
+  deliveryPartner   DeliveryPartner @relation(fields: [deliveryPartnerId], references: [id], onDelete: Cascade)
   orderId           String          @unique
   rating            Int
   comment           String?
@@ -471,9 +472,9 @@ model RiderRating {
 model FavoriteRider {
   id                String          @id @default(cuid())
   userId            String
-  user              User            @relation(fields: [userId], references: [id])
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveryPartnerId String
-  deliveryPartner   DeliveryPartner @relation(fields: [deliveryPartnerId], references: [id])
+  deliveryPartner   DeliveryPartner @relation(fields: [deliveryPartnerId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 

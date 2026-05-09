@@ -11,22 +11,20 @@ import {
   toggleStatus,
   registerAsRider,
 } from '../controllers/rider.controller';
+import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
-// Any authenticated user can register as rider
-router.post('/register', authenticate, registerAsRider);
+router.post('/register', authenticate, asyncHandler(registerAsRider));
 
-// All routes below require DELIVERY role
 router.use(authenticate, requireRole('DELIVERY'));
-
-router.get('/dashboard', getRiderDashboard);
-router.get('/orders', getMyOrders);
-router.get('/orders/available', getAvailableOrders);
-router.post('/orders/:id/accept', acceptOrder);
-router.patch('/orders/:id/status', updateOrderStatus);
-router.post('/orders/:id/proof', submitProof);
-router.patch('/location', updateLocation);
-router.patch('/toggle-status', toggleStatus);
+router.get('/dashboard', asyncHandler(getRiderDashboard));
+router.get('/orders', asyncHandler(getMyOrders));
+router.get('/orders/available', asyncHandler(getAvailableOrders));
+router.post('/orders/:id/accept', asyncHandler(acceptOrder));
+router.patch('/orders/:id/status', asyncHandler(updateOrderStatus));
+router.post('/orders/:id/proof', asyncHandler(submitProof));
+router.patch('/location', asyncHandler(updateLocation));
+router.patch('/toggle-status', asyncHandler(toggleStatus));
 
 export default router;
