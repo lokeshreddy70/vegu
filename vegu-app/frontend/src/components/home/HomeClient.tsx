@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Bell, Search, Plus, Minus, ChevronRight, MapPin, Zap, Star, Tag } from 'lucide-react';
 import LiveBazaarSection from './LiveBazaarSection';
+import ChefKitsSection from './ChefKitsSection';
 import { useAuthStore } from '@/store/auth.store';
 import { useCartStore } from '@/store/cart.store';
 import { syncAddToCart, syncUpdateCartItem } from '@/lib/cartSync';
@@ -265,6 +266,9 @@ export default function HomeClient({ categories, featured, trending }: {
           </div>
         </div>
       )}
+
+      {/* ── Chef Kits ── */}
+      <ChefKitsSection />
 
       {/* ── Promo strip ── */}
       <div className="mx-4 my-4 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
