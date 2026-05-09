@@ -19,15 +19,19 @@ export interface AuthUser {
   } | null;
 }
 
+const INACTIVITY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
 interface AuthStore {
   user: AuthUser | null;
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  lastActivity: number | null;
   setAuth: (user: AuthUser, accessToken: string, refreshToken: string) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
   updateUser: (user: Partial<AuthUser>) => void;
   logout: () => void;
+  touchActivity: () => void;
 }
 
 const safeStorage = {
@@ -39,8 +43,8 @@ const safeStorage = {
   },
 };
 
-const BLANK: Pick<AuthStore, 'user' | 'accessToken' | 'refreshToken' | 'isAuthenticated'> = {
-  user: null, accessToken: null, refreshToken: null, isAuthenticated: false,
+const BLANK: Pick<AuthStore, 'user' | 'accessToken' | 'refreshToken' | 'isAuthenticated' | 'lastActivity'> = {
+  user: null, accessToken: null, refreshToken: null, isAuthenticated: false, lastActivity: null,
 };
 
 export const useAuthStore = create<AuthStore>()(
@@ -49,17 +53,16 @@ export const useAuthStore = create<AuthStore>()(
       ...BLANK,
 
       setAuth: (user, accessToken, refreshToken) => {
-        // DELIVERY users must use vegu-rider-auth — never store them here
         if (user.role === 'DELIVERY') return;
         safeStorage.set('accessToken', accessToken);
         safeStorage.set('refreshToken', refreshToken);
-        set({ user, accessToken, refreshToken, isAuthenticated: true });
+        set({ user, accessToken, refreshToken, isAuthenticated: true, lastActivity: Date.now() });
       },
 
       setTokens: (accessToken, refreshToken) => {
         safeStorage.set('accessToken', accessToken);
         safeStorage.set('refreshToken', refreshToken);
-        set({ accessToken, refreshToken });
+        set({ accessToken, refreshToken, lastActivity: Date.now() });
       },
 
       updateUser: (partial) =>
@@ -70,6 +73,8 @@ export const useAuthStore = create<AuthStore>()(
         safeStorage.remove('refreshToken');
         set(BLANK);
       },
+
+      touchActivity: () => set({ lastActivity: Date.now() }),
     }),
     {
       name: 'vegu-auth',
@@ -82,11 +87,14 @@ export const useAuthStore = create<AuthStore>()(
       // On every app start: if a DELIVERY user slipped into this store (stale data),
       // clear them — riders exclusively use vegu-rider-auth
       onRehydrateStorage: () => (state) => {
-        if (state?.user?.role === 'DELIVERY') {
-          state.user = null;
-          state.accessToken = null;
-          state.refreshToken = null;
-          state.isAuthenticated = false;
+        if (!state) return;
+        if (state.user?.role === 'DELIVERY') {
+          Object.assign(state, BLANK);
+          return;
+        }
+        // Auto-logout after 30 days of inactivity
+        if (state.lastActivity && Date.now() - state.lastActivity > INACTIVITY_MS) {
+          Object.assign(state, BLANK);
         }
       },
     }
