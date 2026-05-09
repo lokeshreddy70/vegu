@@ -3,6 +3,8 @@ dist/
 logs/
 .env
 .env.local
+.env.*.local
+.env.prod
 *.log
 
 .vercel
