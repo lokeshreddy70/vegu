@@ -59,6 +59,10 @@ export const config = {
     apiKey: optional('ANTHROPIC_API_KEY', ''),
   },
 
+  gemini: {
+    apiKey: optional('GEMINI_API_KEY', ''),
+  },
+
   smtp: {
     host: optional('SMTP_HOST', 'smtp.gmail.com'),
     port: parseInt(optional('SMTP_PORT', '587')),

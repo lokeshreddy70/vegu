@@ -1,11 +1,9 @@
 import { Response } from 'express';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { z } from 'zod';
 import { config } from '../config';
 import { sendError } from '../utils/response';
 import { AuthRequest } from '../types';
-
-const client = new Anthropic({ apiKey: config.anthropic.apiKey });
 
 const SYSTEM_PROMPT = `You are VEGU's AI Kitchen Assistant — a smart, friendly culinary companion.
 
@@ -42,7 +40,7 @@ export const kitchenChat = async (req: AuthRequest, res: Response): Promise<void
     return;
   }
 
-  if (!config.anthropic.apiKey) {
+  if (!config.gemini.apiKey) {
     sendError(res, 'AI Kitchen is not configured', 503);
     return;
   }
@@ -54,16 +52,26 @@ export const kitchenChat = async (req: AuthRequest, res: Response): Promise<void
   res.flushHeaders();
 
   try {
-    const stream = await client.messages.stream({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: parsed.data.messages,
+    const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      systemInstruction: SYSTEM_PROMPT,
     });
 
-    for await (const chunk of stream) {
-      if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-        res.write(`data: ${JSON.stringify({ text: chunk.delta.text })}\n\n`);
+    const history = parsed.data.messages.slice(0, -1).map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+
+    const lastMessage = parsed.data.messages[parsed.data.messages.length - 1].content;
+
+    const chat = model.startChat({ history });
+    const stream = await chat.sendMessageStream(lastMessage);
+
+    for await (const chunk of stream.stream) {
+      const text = chunk.text();
+      if (text) {
+        res.write(`data: ${JSON.stringify({ text })}\n\n`);
       }
     }
 
