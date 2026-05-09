@@ -6,7 +6,7 @@ import Providers from '@/components/Providers';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 
 export const viewport: Viewport = {
-  themeColor: '#16a34a',
+  themeColor: '#C9A84C',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
