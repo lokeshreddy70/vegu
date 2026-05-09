@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Package, ChevronRight, Clock, CheckCircle, Truck, XCircle } from 'lucide-react';
+import { ArrowLeft, Package, ChevronRight, Clock, CheckCircle, Truck, XCircle, RefreshCw } from 'lucide-react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { formatPrice, formatDate } from '@/lib/utils';
@@ -34,13 +34,39 @@ export default function OrdersPage() {
     if (!isAuthenticated) router.push('/login');
   }, [isAuthenticated, router]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['orders'],
     queryFn: () => api.get('/api/orders').then(r => r.data),
     enabled: isAuthenticated,
+    retry: 2,
   });
 
   const orders: Order[] = data?.data || [];
+  const totalOrders: number = data?.meta?.total ?? orders.length;
+
+  if (isError) {
+    return (
+      <div className="bg-[#F7F9FA] min-h-screen">
+        <div className="bg-white border-b border-gray-100 flex items-center gap-3 px-4 pt-12 pb-4">
+          <button type="button" aria-label="Go back" onClick={() => router.back()} className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center">
+            <ArrowLeft className="w-4 h-4 text-gray-600" />
+          </button>
+          <h1 className="text-gray-900 font-bold text-lg">My Orders</h1>
+        </div>
+        <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
+          <div className="w-16 h-16 bg-red-50 rounded-3xl flex items-center justify-center mb-4">
+            <RefreshCw className="w-7 h-7 text-red-400" />
+          </div>
+          <h3 className="text-gray-900 font-bold text-base mb-1">Could not load orders</h3>
+          <p className="text-gray-400 text-sm mb-6">Check your connection and try again</p>
+          <button type="button" onClick={() => refetch()}
+            className="bg-veg text-white font-bold px-6 py-3 rounded-2xl text-sm">
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#F7F9FA] min-h-screen pb-24">
@@ -51,7 +77,7 @@ export default function OrdersPage() {
         </button>
         <div>
           <h1 className="text-gray-900 font-bold text-lg">My Orders</h1>
-          <p className="text-gray-400 text-xs">{orders.length} total orders</p>
+          {!isLoading && <p className="text-gray-400 text-xs">{totalOrders} order{totalOrders !== 1 ? 's' : ''}</p>}
         </div>
       </div>
 
@@ -80,7 +106,7 @@ export default function OrdersPage() {
             const preview = order.items.slice(0, 2).map(i => i.name).join(', ');
             return (
               <Link key={order.id} href={`/orders/${order.id}`}>
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3 hover:border-veg/20 transition-colors">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3 hover:border-veg/20 transition-colors active:scale-[0.99]">
                   <div className={`w-11 h-11 rounded-2xl ${cfg.bgColor} flex items-center justify-center shrink-0`}>
                     <StatusIcon className={`w-5 h-5 ${cfg.textColor}`} />
                   </div>
@@ -102,6 +128,12 @@ export default function OrdersPage() {
               </Link>
             );
           })}
+
+          {totalOrders > orders.length && (
+            <p className="text-center text-gray-400 text-xs py-4">
+              Showing {orders.length} of {totalOrders} orders
+            </p>
+          )}
         </div>
       )}
     </div>

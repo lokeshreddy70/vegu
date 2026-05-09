@@ -15,23 +15,38 @@ export const getCart = async (req: AuthRequest, res: Response): Promise<void> =>
 };
 
 export const addToCart = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { productId, quantity = 1 } = z.object({ productId: z.string(), quantity: z.number().int().positive().default(1) }).parse(req.body);
+  const { productId, quantity = 1 } = z.object({
+    productId: z.string(),
+    quantity: z.number().int().positive().default(1),
+  }).parse(req.body);
 
-  const product = await prisma.product.findUnique({ where: { id: productId } });
+  // Fetch product and existing cart item in parallel
+  const [product, existing] = await Promise.all([
+    prisma.product.findUnique({ where: { id: productId } }),
+    prisma.cartItem.findUnique({ where: { userId_productId: { userId: req.user!.userId, productId } } }),
+  ]);
+
   if (!product || !product.isAvailable) {
     sendError(res, 'Product not available', 400);
     return;
   }
-  if (product.stock < quantity) {
-    sendError(res, 'Insufficient stock', 400);
+
+  // Guard: total in cart after this add must not exceed available stock
+  const currentQty = existing?.quantity ?? 0;
+  const newTotal = currentQty + quantity;
+  if (newTotal > product.stock) {
+    const remaining = product.stock - currentQty;
+    sendError(res, remaining <= 0
+      ? `${product.name} is out of stock`
+      : `Only ${remaining} more unit${remaining !== 1 ? 's' : ''} available`, 400);
     return;
   }
 
   const item = await prisma.cartItem.upsert({
     where: { userId_productId: { userId: req.user!.userId, productId } },
-    update: { quantity: { increment: quantity } },
+    update: { quantity: newTotal },
     create: { userId: req.user!.userId, productId, quantity },
-    include: { product: true },
+    include: { product: { select: { id: true, name: true, slug: true, price: true, images: true, stock: true, unit: true, isAvailable: true } } },
   });
 
   sendSuccess(res, item, 'Added to cart', 201);
@@ -40,6 +55,13 @@ export const addToCart = async (req: AuthRequest, res: Response): Promise<void> 
 export const updateCartItem = async (req: AuthRequest, res: Response): Promise<void> => {
   const { quantity } = z.object({ quantity: z.number().int().positive() }).parse(req.body);
   const { productId } = req.params;
+
+  // Validate requested quantity against current stock
+  const product = await prisma.product.findUnique({ where: { id: productId }, select: { stock: true, name: true } });
+  if (product && quantity > product.stock) {
+    sendError(res, `Only ${product.stock} unit${product.stock !== 1 ? 's' : ''} available for ${product.name}`, 400);
+    return;
+  }
 
   const item = await prisma.cartItem.update({
     where: { userId_productId: { userId: req.user!.userId, productId } },
