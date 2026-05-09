@@ -2,13 +2,11 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { Search, X, SlidersHorizontal } from 'lucide-react';
+import { Search, X, ArrowLeft } from 'lucide-react';
 import api from '@/lib/api';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
 import ProductCard from '@/components/product/ProductCard';
+import BottomNav from '@/components/layout/BottomNav';
 
 function SearchContent() {
   const searchParams = useSearchParams();
@@ -38,105 +36,84 @@ function SearchContent() {
   });
 
   return (
-    <>
-      <Navbar />
-      <main className="min-h-screen pt-20 pb-16">
-        <div className="container-page py-8">
-          {/* Search bar */}
-          <div className="relative max-w-2xl mx-auto mb-10">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-            <input
-              autoFocus
-              type="search"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Search for fruits, vegetables, dairy…"
-              className="w-full pl-14 pr-12 py-4 text-lg rounded-3xl border border-gray-200 bg-white shadow-lg shadow-gray-100/60 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => { setQuery(''); setDebouncedQuery(''); }}
-                className="absolute right-5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-                aria-label="Clear search"
-              >
-                <X className="w-4 h-4 text-gray-500" />
-              </button>
-            )}
-          </div>
-
-          {/* Results */}
-          {debouncedQuery.length >= 2 ? (
-            <>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-gray-900">
-                  {isLoading ? 'Searching…' : `${total} result${total !== 1 ? 's' : ''} for "${debouncedQuery}"`}
-                </h2>
-              </div>
-
-              {isLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <div key={i} className="card">
-                      <div className="skeleton aspect-square" />
-                      <div className="p-4 space-y-2">
-                        <div className="skeleton h-4 w-3/4 rounded" />
-                        <div className="skeleton h-3 w-1/2 rounded" />
-                        <div className="skeleton h-8 rounded-xl mt-3" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : products.length === 0 ? (
-                <div className="text-center py-24">
-                  <div className="text-6xl mb-4">🔍</div>
-                  <h3 className="text-xl font-semibold text-gray-700 mb-2">No results found</h3>
-                  <p className="text-gray-500">Try a different search term or browse categories</p>
-                  <button
-                    type="button"
-                    onClick={() => router.push('/products')}
-                    className="btn-primary mt-6 inline-flex"
-                  >
-                    Browse All Products
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                  {products.map((product: Parameters<typeof ProductCard>[0]['product'], i: number) => (
-                    <motion.div
-                      key={product.id}
-                      initial={{ opacity: 0, y: 16 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.03 }}
-                    >
-                      <ProductCard product={product} />
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            /* Trending when no query */
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Trending Now</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {(trending || []).slice(0, 10).map((product: Parameters<typeof ProductCard>[0]['product'], i: number) => (
-                  <motion.div
-                    key={product.id}
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.04 }}
-                  >
-                    <ProductCard product={product} />
-                  </motion.div>
-                ))}
-              </div>
-            </div>
+    <div className="min-h-screen bg-app-bg pb-24">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 pt-12 pb-4">
+        <button type="button" aria-label="Go back" onClick={() => router.back()} className="w-9 h-9 bg-app-card border border-app-border rounded-xl flex items-center justify-center shrink-0">
+          <ArrowLeft className="w-4 h-4 text-zinc-300" />
+        </button>
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+          <input
+            autoFocus
+            type="search"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search for fruits, vegetables…"
+            className="w-full bg-app-card border border-app-border rounded-xl pl-9 pr-9 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-gold/50"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => { setQuery(''); setDebouncedQuery(''); }}
+              aria-label="Clear search"
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-zinc-700 flex items-center justify-center"
+            >
+              <X className="w-3 h-3 text-zinc-300" />
+            </button>
           )}
         </div>
-      </main>
-      <Footer />
-    </>
+      </div>
+
+      <div className="px-4">
+        {debouncedQuery.length >= 2 ? (
+          <>
+            <p className="text-zinc-500 text-xs mb-4">
+              {isLoading ? 'Searching…' : `${total} result${total !== 1 ? 's' : ''} for "${debouncedQuery}"`}
+            </p>
+            {isLoading ? (
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="bg-app-card border border-app-border rounded-2xl overflow-hidden animate-pulse">
+                    <div className="aspect-square bg-zinc-800" />
+                    <div className="p-3 space-y-2">
+                      <div className="h-3 w-3/4 bg-zinc-800 rounded" />
+                      <div className="h-3 w-1/2 bg-zinc-800 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : products.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24">
+                <div className="text-5xl mb-4">🔍</div>
+                <h3 className="text-white font-bold text-lg mb-1">No results found</h3>
+                <p className="text-zinc-500 text-sm text-center mb-5">Try a different search term</p>
+                <button type="button" onClick={() => router.push('/products')} className="bg-gold text-black font-bold px-6 py-2.5 rounded-2xl text-sm">
+                  Browse All Products
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {products.map((product: Parameters<typeof ProductCard>[0]['product']) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <div>
+            <p className="text-white font-bold text-sm mb-4">Trending Now</p>
+            <div className="grid grid-cols-2 gap-3">
+              {(trending || []).slice(0, 10).map((product: Parameters<typeof ProductCard>[0]['product']) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <BottomNav />
+    </div>
   );
 }
 

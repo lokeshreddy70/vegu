@@ -1,13 +1,11 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { Filter, SlidersHorizontal, Search } from 'lucide-react';
+import { Search, SlidersHorizontal } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import ProductCard from '@/components/product/ProductCard';
-import Input from '@/components/ui/Input';
 
 function ProductsContent() {
   const searchParams = useSearchParams();
@@ -41,101 +39,106 @@ function ProductsContent() {
   const products = data?.data || [];
   const meta = data?.meta;
 
-  return (
-    <div className="container-page py-8">
-      <div className="flex flex-col gap-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-1">
-            {searchParams.get('featured') ? 'Featured Products' : searchParams.get('trending') ? 'Trending Products' : category ? categoriesData?.find((c: { slug: string }) => c.slug === category)?.name || 'Products' : 'All Products'}
-          </h1>
-          <p className="text-gray-500">{meta?.total || 0} products found</p>
-        </div>
+  const title = searchParams.get('featured')
+    ? 'Featured Products'
+    : searchParams.get('trending')
+    ? 'Trending Products'
+    : category
+    ? categoriesData?.find((c: { slug: string }) => c.slug === category)?.name || 'Products'
+    : 'All Products';
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <Input
-              placeholder="Search products..."
-              icon={<Search className="w-4 h-4" />}
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            />
-          </div>
+  return (
+    <div className="px-4 pt-12 pb-4">
+      {/* Header */}
+      <div className="mb-5">
+        <h1 className="text-white font-bold text-xl">{title}</h1>
+        <p className="text-zinc-500 text-xs mt-0.5">{meta?.total || 0} products found</p>
+      </div>
+
+      {/* Search bar */}
+      <div className="relative mb-3">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+        <input
+          type="search"
+          value={search}
+          onChange={e => { setSearch(e.target.value); setPage(1); }}
+          placeholder="Search products..."
+          className="w-full bg-app-card border border-app-border rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-gold/50"
+        />
+      </div>
+
+      {/* Filters row */}
+      <div className="flex gap-2 mb-5">
+        <div className="relative flex-1">
+          <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
           <select
             value={category}
-            onChange={(e) => { setCategory(e.target.value); setPage(1); }}
-            className="input w-full sm:w-48"
+            onChange={e => { setCategory(e.target.value); setPage(1); }}
+            className="w-full bg-app-card border border-app-border rounded-xl pl-8 pr-3 py-2.5 text-sm text-zinc-300 outline-none appearance-none"
           >
             <option value="">All Categories</option>
             {categoriesData?.map((c: { id: string; slug: string; name: string }) => (
               <option key={c.id} value={c.slug}>{c.name}</option>
             ))}
           </select>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="input w-full sm:w-48"
-          >
-            <option value="newest">Newest First</option>
-            <option value="price">Price: Low to High</option>
-            <option value="rating">Top Rated</option>
-            <option value="popular">Most Popular</option>
-          </select>
         </div>
-
-        {/* Products Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="card">
-                <div className="skeleton aspect-square" />
-                <div className="p-4 space-y-2">
-                  <div className="skeleton h-4 w-3/4 rounded" />
-                  <div className="skeleton h-3 w-1/2 rounded" />
-                  <div className="skeleton h-8 w-full rounded-xl mt-4" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : products.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4">🛒</div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">No products found</h3>
-            <p className="text-gray-500">Try adjusting your filters or search term</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {products.map((product: Parameters<typeof ProductCard>[0]['product'], i: number) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-              >
-                <ProductCard product={product} />
-              </motion.div>
-            ))}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {meta && meta.totalPages > 1 && (
-          <div className="flex justify-center gap-2 mt-8">
-            {Array.from({ length: meta.totalPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPage(p)}
-                className={`w-10 h-10 rounded-2xl font-semibold text-sm transition-all ${
-                  p === page ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/25' : 'bg-white text-gray-700 border border-gray-200 hover:border-primary-300'
-                }`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-        )}
+        <select
+          value={sortBy}
+          onChange={e => setSortBy(e.target.value)}
+          title="Sort products"
+          className="bg-app-card border border-app-border rounded-xl px-3 py-2.5 text-sm text-zinc-300 outline-none appearance-none"
+        >
+          <option value="newest">Newest</option>
+          <option value="price">Price ↑</option>
+          <option value="rating">Top Rated</option>
+          <option value="popular">Popular</option>
+        </select>
       </div>
+
+      {/* Grid */}
+      {isLoading ? (
+        <div className="grid grid-cols-2 gap-3">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="bg-app-card border border-app-border rounded-2xl overflow-hidden animate-pulse">
+              <div className="aspect-square bg-zinc-800" />
+              <div className="p-3 space-y-2">
+                <div className="h-3 w-3/4 bg-zinc-800 rounded" />
+                <div className="h-3 w-1/2 bg-zinc-800 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : products.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24">
+          <div className="text-6xl mb-4">🔍</div>
+          <h3 className="text-white font-bold text-lg mb-1">No products found</h3>
+          <p className="text-zinc-500 text-sm text-center">Try adjusting your filters or search term</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {products.map((product: Parameters<typeof ProductCard>[0]['product']) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {meta && meta.totalPages > 1 && (
+        <div className="flex justify-center gap-2 mt-6">
+          {Array.from({ length: meta.totalPages }, (_, i) => i + 1).map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPage(p)}
+              className={`w-9 h-9 rounded-xl font-bold text-sm transition-all ${
+                p === page ? 'bg-gold text-black' : 'bg-app-card border border-app-border text-zinc-400'
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

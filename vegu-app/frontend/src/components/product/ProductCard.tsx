@@ -2,9 +2,9 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { ShoppingCart, Star, Heart, Zap } from 'lucide-react';
+import { Star, Zap, Plus, Minus } from 'lucide-react';
 import { useCartStore } from '@/store/cart.store';
+import { syncAddToCart, syncUpdateCartItem } from '@/lib/cartSync';
 import { formatPrice } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -27,102 +27,107 @@ interface Product {
 }
 
 export default function ProductCard({ product }: { product: Product }) {
-  const { addItem, getItem } = useCartStore();
+  const { addItem, getItem, updateQuantity } = useCartStore();
   const cartItem = getItem(product.id);
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!product.isAvailable || product.stock === 0) return;
-    addItem({
-      id: product.id,
-      name: product.name,
-      slug: product.slug,
-      price: product.price,
-      images: product.images,
-      unit: product.unit,
-      stock: product.stock,
-    });
-    toast.success(`${product.name} added to cart`);
+    addItem({ id: product.id, name: product.name, slug: product.slug, price: product.price, images: product.images, unit: product.unit, stock: product.stock });
+    syncAddToCart(product.id, 1);
+    toast.success(`${product.name} added!`, { style: { background: '#1A1A1A', color: '#fff', border: '1px solid #272727' } });
+  };
+
+  const handleInc = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!cartItem) return;
+    const next = Math.min(cartItem.quantity + 1, product.stock);
+    updateQuantity(product.id, next);
+    syncUpdateCartItem(product.id, next);
+  };
+
+  const handleDec = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!cartItem) return;
+    updateQuantity(product.id, cartItem.quantity - 1);
+    syncUpdateCartItem(product.id, cartItem.quantity - 1);
   };
 
   return (
-    <motion.div
-      whileHover={{ y: -4 }}
-      transition={{ duration: 0.2 }}
-      className="card group relative"
-    >
-      <Link href={`/products/${product.slug}`}>
-        <div className="relative aspect-square overflow-hidden bg-gray-50">
+    <Link href={`/products/${product.slug}`} className="block">
+      <div className="bg-app-card border border-app-border rounded-2xl overflow-hidden group">
+        <div className="relative aspect-square bg-zinc-900">
           {product.images[0] ? (
             <Image
               src={product.images[0]}
               alt={product.name}
               fill
-              className="object-cover group-hover:scale-105 transition-transform duration-500"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              sizes="(max-width: 640px) 50vw, 25vw"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-4xl">🛒</div>
           )}
-
-          {/* Badges */}
-          <div className="absolute top-3 left-3 flex flex-col gap-1">
+          <div className="absolute top-2 left-2 flex flex-col gap-1">
             {product.discount > 0 && (
-              <span className="badge bg-red-500 text-white text-xs">{product.discount}% OFF</span>
+              <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">{product.discount}% OFF</span>
             )}
             {product.isTrending && (
-              <span className="badge bg-orange-500 text-white text-xs flex items-center gap-0.5">
+              <span className="bg-orange-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-0.5">
                 <Zap className="w-2.5 h-2.5" /> Hot
               </span>
             )}
           </div>
-
-          <button className="absolute top-3 right-3 w-8 h-8 rounded-xl bg-white/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white hover:scale-110">
-            <Heart className="w-4 h-4 text-gray-500 hover:text-red-500 transition-colors" />
-          </button>
-
           {product.stock === 0 && (
-            <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center">
-              <span className="badge bg-gray-800 text-white">Out of Stock</span>
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <span className="bg-zinc-800 text-zinc-300 text-xs font-bold px-3 py-1 rounded-full">Out of Stock</span>
             </div>
           )}
         </div>
 
-        <div className="p-4">
+        <div className="p-3">
           {product.category && (
-            <p className="text-xs text-primary-600 font-semibold mb-1 uppercase tracking-wide">{product.category.name}</p>
+            <p className="text-gold text-[10px] font-bold uppercase tracking-wide mb-0.5">{product.category.name}</p>
           )}
-          <h3 className="font-semibold text-gray-900 text-sm leading-tight line-clamp-2 mb-1">{product.name}</h3>
-          <p className="text-xs text-gray-500 mb-3">{product.unit}</p>
-
-          <div className="flex items-center gap-1 mb-3">
-            <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-            <span className="text-xs font-semibold text-gray-700">{product.rating.toFixed(1)}</span>
-            <span className="text-xs text-gray-400">({product.reviewCount})</span>
-          </div>
-
-          <div className="flex items-center justify-between">
+          <h3 className="text-white text-sm font-semibold leading-tight line-clamp-2 mb-0.5">{product.name}</h3>
+          <p className="text-zinc-600 text-xs mb-2">{product.unit}</p>
+          {product.reviewCount > 0 && (
+            <div className="flex items-center gap-1 mb-2">
+              <Star className="w-3 h-3 text-gold fill-gold" />
+              <span className="text-zinc-400 text-xs">{product.rating.toFixed(1)}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-2">
             <div>
-              <span className="text-lg font-bold text-gray-900">{formatPrice(product.price)}</span>
+              <span className="text-white font-bold text-sm">{formatPrice(product.price)}</span>
               {product.comparePrice && (
-                <span className="text-xs text-gray-400 line-through ml-2">{formatPrice(product.comparePrice)}</span>
+                <span className="text-zinc-600 text-xs line-through ml-1">{formatPrice(product.comparePrice)}</span>
               )}
             </div>
+            {cartItem ? (
+              <div className="flex items-center gap-1.5 bg-zinc-800 rounded-xl px-2 py-1" onClick={e => e.preventDefault()}>
+                <button type="button" aria-label="Decrease quantity" onClick={handleDec} className="w-4 h-4 flex items-center justify-center">
+                  <Minus className="w-3 h-3 text-zinc-300" />
+                </button>
+                <span className="text-white text-xs font-bold w-4 text-center">{cartItem.quantity}</span>
+                <button type="button" aria-label="Increase quantity" onClick={handleInc} disabled={cartItem.quantity >= product.stock} className="w-4 h-4 flex items-center justify-center disabled:opacity-40">
+                  <Plus className="w-3 h-3 text-zinc-300" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                aria-label="Add to cart"
+                onClick={handleAdd}
+                disabled={!product.isAvailable || product.stock === 0}
+                className="w-7 h-7 bg-gold rounded-lg flex items-center justify-center disabled:opacity-40 shrink-0"
+              >
+                <Plus className="w-4 h-4 text-black" strokeWidth={2.5} />
+              </button>
+            )}
           </div>
         </div>
-      </Link>
-
-      <div className="px-4 pb-4">
-        <motion.button
-          onClick={handleAddToCart}
-          whileTap={{ scale: 0.95 }}
-          disabled={!product.isAvailable || product.stock === 0}
-          className="w-full btn-primary py-2.5 text-sm flex items-center justify-center gap-2"
-        >
-          <ShoppingCart className="w-4 h-4" />
-          {cartItem ? `In Cart (${cartItem.quantity})` : 'Add to Cart'}
-        </motion.button>
       </div>
-    </motion.div>
+    </Link>
   );
 }
