@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Bell, Search, Plus, Minus, ChevronRight, MapPin, Zap, Star, Tag } from 'lucide-react';
+import LiveBazaarSection from './LiveBazaarSection';
 import { useAuthStore } from '@/store/auth.store';
 import { useCartStore } from '@/store/cart.store';
 import { syncAddToCart, syncUpdateCartItem } from '@/lib/cartSync';
@@ -241,6 +242,9 @@ export default function HomeClient({ categories, featured, trending }: {
           </div>
         </div>
       </div>
+
+      {/* ── Live Bazaar ── */}
+      <LiveBazaarSection />
 
       {/* ── Top Picks ── */}
       {allProducts.length > 0 && (
