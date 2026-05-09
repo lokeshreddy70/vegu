@@ -19,7 +19,7 @@ function ProductsContent() {
     queryFn: () => api.get('/api/categories').then(r => r.data.data),
   });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['products', { search, category, sortBy, page, featured: searchParams.get('featured'), trending: searchParams.get('trending') }],
     queryFn: () =>
       api.get('/api/products', {
@@ -96,7 +96,15 @@ function ProductsContent() {
       </div>
 
       {/* Grid */}
-      {isLoading ? (
+      {isError ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <p className="text-gray-500 text-sm mb-4">Could not load products</p>
+          <button type="button" onClick={() => refetch()}
+            className="bg-veg text-white font-bold px-6 py-3 rounded-2xl text-sm">
+            Try Again
+          </button>
+        </div>
+      ) : isLoading ? (
         <div className="grid grid-cols-2 gap-3">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="bg-white border border-gray-100 rounded-2xl overflow-hidden animate-pulse shadow-sm">

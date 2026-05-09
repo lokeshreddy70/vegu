@@ -44,7 +44,7 @@ function getMeta(slug: string, name: string) {
 export default function CategoriesPage() {
   const router = useRouter();
 
-  const { data: categories = [], isLoading } = useQuery<Category[]>({
+  const { data: categories = [], isLoading, isError, refetch } = useQuery<Category[]>({
     queryKey: ['categories'],
     queryFn: () => api.get('/api/categories').then(r => r.data.data),
   });
@@ -73,6 +73,14 @@ export default function CategoriesPage() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-20 bg-white rounded-2xl border border-gray-100 animate-pulse" />
           ))}
+        </div>
+      ) : isError ? (
+        <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
+          <p className="text-gray-500 text-sm mb-4">Could not load categories</p>
+          <button type="button" onClick={() => refetch()}
+            className="bg-veg text-white font-bold px-6 py-3 rounded-2xl text-sm">
+            Try Again
+          </button>
         </div>
       ) : (
         <div className="px-4 mt-4 space-y-2">

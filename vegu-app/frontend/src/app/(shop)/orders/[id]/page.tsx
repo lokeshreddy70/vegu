@@ -1,12 +1,13 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useEffect } from 'next/navigation';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, MapPin, XCircle, Leaf, CheckCircle2 } from 'lucide-react';
 import RiderRatingCard from '@/components/orders/RiderRatingCard';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
+import { useAuthStore } from '@/store/auth.store';
 import { formatPrice, formatDate } from '@/lib/utils';
 
 const STEPS = [
@@ -40,10 +41,16 @@ export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
+  const { isAuthenticated } = useAuthStore();
+
+  useEffect(() => {
+    if (!isAuthenticated) router.push('/login');
+  }, [isAuthenticated, router]);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', id],
     queryFn: () => api.get(`/api/orders/${id}?include=deliveryPartner`).then(r => r.data.data),
+    enabled: isAuthenticated,
     // Poll every 30 s while order is active
     refetchInterval: (query) => {
       const status = query.state.data?.status;

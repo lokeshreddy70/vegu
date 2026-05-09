@@ -44,7 +44,7 @@ export default async function HomePage() {
   const [categories, featured, trending] = await Promise.all([getCategories(), getFeatured(), getTrending()]);
 
   return (
-    <div className="min-h-screen bg-app-bg pb-20">
+    <div className="min-h-screen bg-[#F7F9FA] pb-20">
       <HomeClient categories={categories} featured={featured} trending={trending} />
       <BottomNav />
     </div>
