@@ -261,8 +261,10 @@ export const toggleStatus = async (req: AuthRequest, res: Response): Promise<voi
 
 // ── Submit Proof of Delivery ────────────────────────────────────────────────
 
+// 6 MB base64 ≈ 4.5 MB binary — generous for a phone camera crop
+const MAX_BASE64 = 6_000_000;
 const proofSchema = z.object({
-  imageBase64: z.string().min(100, 'Image required'),
+  imageBase64: z.string().min(100, 'Image required').max(MAX_BASE64, 'Image too large (max ~4.5 MB)'),
   lat: z.number().optional(),
   lng: z.number().optional(),
   address: z.string().optional(),

@@ -151,8 +151,12 @@ export const placeOrder = async (req: AuthRequest, res: Response): Promise<void>
       include: { items: true, address: true },
     });
 
-    // Increment coupon usage inside transaction
+    // Re-validate and increment coupon usage atomically inside transaction
     if (appliedCouponId) {
+      const freshCoupon = await tx.coupon.findUnique({ where: { id: appliedCouponId } });
+      if (!freshCoupon || (freshCoupon.usageLimit !== null && freshCoupon.usedCount >= freshCoupon.usageLimit)) {
+        throw new Error('Coupon is no longer available');
+      }
       await tx.coupon.update({
         where: { id: appliedCouponId },
         data: { usedCount: { increment: 1 } },

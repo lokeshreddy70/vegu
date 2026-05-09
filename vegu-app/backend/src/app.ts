@@ -64,7 +64,10 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// ── Body parsing — tight limits to prevent payload attacks ───────────────────
+// ── Body parsing ──────────────────────────────────────────────────────────────
+// Proof-of-delivery uploads base64 phone photos (~2-4 MB encoded).
+// The proof endpoint uses a higher limit; all other endpoints stay tight.
+app.use('/api/rider/orders', express.json({ limit: '8mb' }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.set('trust proxy', 1);

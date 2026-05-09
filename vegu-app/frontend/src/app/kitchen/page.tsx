@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Send, ShoppingCart, ChefHat, Sparkles, Check } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
@@ -37,25 +37,34 @@ function extractIngredients(text: string): { clean: string; ingredients: Ingredi
 }
 
 export default function KitchenPage() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, accessToken } = useAuthStore();
   const { addItem } = useCartStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const send = async (text: string) => {
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
+
+  const send = useCallback(async (text: string) => {
     if (!text.trim() || streaming) return;
     const userMsg: Message = { role: 'user', content: text.trim() };
     const history = [...messages, userMsg];
     setMessages(history);
     setInput('');
     setStreaming(true);
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     const apiMessages = history.map(m => ({ role: m.role, content: m.content }));
     const assistantMsg: Message = { role: 'assistant', content: '' };
@@ -64,8 +73,9 @@ export default function KitchenPage() {
     try {
       const res = await fetch('/api/kitchen/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken || ''}` },
         body: JSON.stringify({ messages: apiMessages }),
+        signal: controller.signal,
       });
 
       if (!res.ok || !res.body) throw new Error('Failed');
@@ -105,7 +115,8 @@ export default function KitchenPage() {
         updated[updated.length - 1] = { role: 'assistant', content: clean, ingredients };
         return updated;
       });
-    } catch {
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return;
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = { role: 'assistant', content: "Sorry, I couldn't connect to the kitchen AI. Please try again." };
@@ -114,7 +125,7 @@ export default function KitchenPage() {
     } finally {
       setStreaming(false);
     }
-  };
+  }, [messages, streaming, accessToken]);
 
   const addAllToCart = async (ingredients: Ingredient[], msgIdx: number) => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
@@ -205,9 +216,9 @@ export default function KitchenPage() {
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                 ) : (
                   <div className="flex gap-1 py-1">
-                    <span className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <span className="w-2 h-2 bg-gray-300 rounded-full animate-bounce bounce-delay-0" />
+                    <span className="w-2 h-2 bg-gray-300 rounded-full animate-bounce bounce-delay-150" />
+                    <span className="w-2 h-2 bg-gray-300 rounded-full animate-bounce bounce-delay-300" />
                   </div>
                 )}
               </div>
@@ -267,6 +278,7 @@ export default function KitchenPage() {
             className="flex-1 resize-none bg-gray-100 rounded-2xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-veg/20 max-h-32 leading-relaxed"
           />
           <button type="button" onClick={() => send(input)} disabled={!input.trim() || streaming}
+            title="Send message"
             className="w-11 h-11 bg-veg text-white rounded-2xl flex items-center justify-center shrink-0 disabled:opacity-40 active:scale-[0.95] transition-all">
             <Send className="w-4 h-4" />
           </button>

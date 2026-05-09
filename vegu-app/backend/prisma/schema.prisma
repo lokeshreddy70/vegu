@@ -246,6 +246,8 @@ model DeliveryPartner {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([status])
+  @@index([userId])
   @@map("delivery_partners")
 }
 
@@ -490,5 +492,6 @@ model DeliveryProof {
   address     String?
   capturedAt  DateTime @default(now())
 
+  @@index([riderId])
   @@map("delivery_proofs")
 }

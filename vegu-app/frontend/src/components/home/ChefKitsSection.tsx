@@ -151,6 +151,7 @@ export default function ChefKitsSection() {
     if (products.length === 0) {
       toast.error('No matching products found. Check back soon!');
       setAdding(false);
+      setAdded(false);
       return;
     }
     products.forEach(p => {
