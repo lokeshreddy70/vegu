@@ -16,7 +16,7 @@ export default function RiderProfilePage() {
     if (!user || user.role !== 'DELIVERY') router.push('/rider/login');
   }, [user, router]);
 
-  const { data } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: ['rider-dashboard'],
     queryFn: () => riderApi.get('/api/rider/dashboard').then(r => r.data.data),
     enabled: !!user,
@@ -35,6 +35,18 @@ export default function RiderProfilePage() {
   };
 
   if (!user) return null;
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center px-4">
+        <p className="text-white/30 text-sm mb-4">Could not load profile data</p>
+        <button type="button" onClick={() => router.refresh()}
+          className="text-white/50 text-xs border border-white/10 px-4 py-2 rounded-xl">
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   const partner = data?.partner;
   const initials = user.name
