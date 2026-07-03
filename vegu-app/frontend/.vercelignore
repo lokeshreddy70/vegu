@@ -1,0 +1,5 @@
+# Keep Vercel deployment focused on Next.js web app only
+android/**
+.next/cache/**
+node_modules/**
+*.zip
