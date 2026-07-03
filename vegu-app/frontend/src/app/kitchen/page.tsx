@@ -2,13 +2,22 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Send, ShoppingCart, ChefHat, Sparkles, Check } from 'lucide-react';
+import { ArrowLeft, Send, ShoppingCart, ChefHat, Sparkles, Check, Mic, MicOff } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { useCartStore } from '@/store/cart.store';
 import { syncAddToCart } from '@/lib/cartSync';
+import { resolveApiBase } from '@/lib/apiBase';
 import toast from 'react-hot-toast';
 
+const apiBase = resolveApiBase('');
+
 interface Ingredient { name: string; qty: string; searchQuery: string; }
+interface KitchenProduct {
+  id: string;
+  name: string;
+  slug: string;
+  images: string[];
+}
 interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -16,12 +25,43 @@ interface Message {
   addedToCart?: boolean;
 }
 
+type SpeechRec = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type SpeechRecCtor = new () => SpeechRec;
+
 const SUGGESTIONS = [
   "I have tomatoes, onions and paneer. What can I make?",
   "Plan a healthy week of dinner for 2",
   "Quick breakfast ideas under 15 minutes",
   "High-protein meal plan for gym days",
   "Easy biryani recipe for 4 people",
+];
+
+const QUICK_RECIPES = [
+  {
+    title: 'Paneer Butter Masala',
+    prompt: 'Give me a quick Paneer Butter Masala recipe for 3 people with exact ingredients list.',
+    image: 'https://images.unsplash.com/photo-1631452180539-96aca7d48617?w=900&q=80',
+  },
+  {
+    title: 'Veg Fried Rice',
+    prompt: 'Suggest a 20-minute veg fried rice recipe and include all ingredients with qty.',
+    image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=900&q=80',
+  },
+  {
+    title: 'Protein Breakfast',
+    prompt: 'Create a high-protein breakfast using eggs, oats, and curd. Include ingredients list.',
+    image: 'https://images.unsplash.com/photo-1494859802809-d069c3b71a8a?w=900&q=80',
+  },
 ];
 
 function extractIngredients(text: string): { clean: string; ingredients: Ingredient[] } {
@@ -42,9 +82,13 @@ export default function KitchenPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
+  const [featuredProducts, setFeaturedProducts] = useState<KitchenProduct[]>([]);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const speechRef = useRef<SpeechRec | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -53,6 +97,61 @@ export default function KitchenPage() {
   useEffect(() => {
     return () => { abortRef.current?.abort(); };
   }, []);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const res = await fetch(`${apiBase}/api/products?limit=12`);
+        const json = await res.json();
+        setFeaturedProducts((json?.data || []).slice(0, 12));
+      } catch {
+        setFeaturedProducts([]);
+      }
+    };
+    void loadProducts();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const ctor = (window as Window & { SpeechRecognition?: SpeechRecCtor; webkitSpeechRecognition?: SpeechRecCtor }).SpeechRecognition
+      || (window as Window & { SpeechRecognition?: SpeechRecCtor; webkitSpeechRecognition?: SpeechRecCtor }).webkitSpeechRecognition;
+    if (!ctor) return;
+
+    const rec = new ctor();
+    rec.lang = 'en-IN';
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript || '';
+      if (transcript) {
+        setInput((prev) => `${prev} ${transcript}`.trim());
+      }
+    };
+    rec.onend = () => setIsListening(false);
+    rec.onerror = () => setIsListening(false);
+    speechRef.current = rec;
+    setVoiceSupported(true);
+
+    return () => {
+      rec.stop();
+      speechRef.current = null;
+    };
+  }, []);
+
+  const toggleVoice = () => {
+    const rec = speechRef.current;
+    if (!rec) {
+      toast.error('Voice input is not supported on this device');
+      return;
+    }
+    if (isListening) {
+      rec.stop();
+      setIsListening(false);
+      return;
+    }
+    rec.start();
+    setIsListening(true);
+  };
 
   const send = useCallback(async (text: string) => {
     if (!text.trim() || streaming) return;
@@ -71,7 +170,7 @@ export default function KitchenPage() {
     setMessages([...history, assistantMsg]);
 
     try {
-      const res = await fetch('/api/kitchen/chat', {
+      const res = await fetch(`${apiBase}/api/kitchen/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken || ''}` },
         body: JSON.stringify({ messages: apiMessages }),
@@ -141,7 +240,7 @@ export default function KitchenPage() {
   }, [messages, streaming, accessToken]);
 
   const addAllToCart = async (ingredients: Ingredient[], msgIdx: number) => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    const apiUrl = resolveApiBase('');
     let added = 0;
     await Promise.allSettled(
       ingredients.map(async (ing) => {
@@ -205,6 +304,47 @@ export default function KitchenPage() {
                 </button>
               ))}
             </div>
+
+            <div className="w-full mt-8">
+              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-2">Popular Recipes</p>
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {QUICK_RECIPES.map((r) => (
+                  <button
+                    key={r.title}
+                    type="button"
+                    onClick={() => send(r.prompt)}
+                    className="min-w-[190px] rounded-2xl overflow-hidden border border-gray-100 bg-white shadow-sm text-left"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={r.image} alt={r.title} className="h-24 w-full object-cover" />
+                    <div className="p-3">
+                      <p className="text-sm font-semibold text-gray-900">{r.title}</p>
+                      <p className="text-[11px] text-veg mt-1">Tap to generate ingredients</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {featuredProducts.length > 0 && (
+              <div className="w-full mt-6">
+                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-2">Ingredients In Vegu</p>
+                <div className="grid grid-cols-3 gap-2 w-full max-w-sm">
+                  {featuredProducts.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => send(`Suggest 2 recipes using ${p.name} and list all required ingredients.`)}
+                      className="bg-white border border-gray-100 rounded-xl p-2 text-center shadow-sm"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={p.images?.[0] || ''} alt={p.name} className="h-12 w-full object-cover rounded-md mb-1" />
+                      <p className="text-[11px] text-gray-700 line-clamp-2">{p.name}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -294,6 +434,15 @@ export default function KitchenPage() {
             title="Send message"
             className="w-11 h-11 bg-veg text-white rounded-2xl flex items-center justify-center shrink-0 disabled:opacity-40 active:scale-[0.95] transition-all">
             <Send className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={toggleVoice}
+            disabled={!voiceSupported || streaming}
+            title="Voice input"
+            className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 disabled:opacity-40 transition-all ${isListening ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-700'}`}
+          >
+            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </button>
         </div>
       </div>

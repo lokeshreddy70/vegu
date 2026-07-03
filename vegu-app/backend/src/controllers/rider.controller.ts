@@ -12,6 +12,21 @@ const getPartner = async (userId: string) => {
   return partner;
 };
 
+const syncPartnerStats = async (partnerId: string) => {
+  const [deliveries, earned] = await Promise.all([
+    prisma.order.count({ where: { deliveryPartnerId: partnerId, status: 'DELIVERED' } }),
+    prisma.order.aggregate({ where: { deliveryPartnerId: partnerId, status: 'DELIVERED' }, _sum: { deliveryFee: true } }),
+  ]);
+
+  await prisma.deliveryPartner.update({
+    where: { id: partnerId },
+    data: {
+      totalDeliveries: deliveries,
+      totalEarnings: earned._sum.deliveryFee ?? 0,
+    },
+  });
+};
+
 // ── Dashboard stats ─────────────────────────────────────────────────────────
 
 export const getRiderDashboard = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -189,6 +204,13 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response): Promis
       },
     };
 
+    if (status === 'OUT_FOR_DELIVERY') {
+      await prisma.deliveryPartner.update({
+        where: { id: partner.id },
+        data: { status: 'BUSY' },
+      });
+    }
+
     if (status === 'DELIVERED') {
       updateData.deliveredAt = new Date();
       // Update partner stats
@@ -210,6 +232,10 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response): Promis
         address: true,
       },
     });
+
+    if (status === 'DELIVERED') {
+      await syncPartnerStats(partner.id);
+    }
 
     sendSuccess(res, updated, `Status updated to ${status}`);
   } catch (err) {
@@ -320,6 +346,8 @@ export const submitProof = async (req: AuthRequest, res: Response): Promise<void
         },
       }),
     ]);
+
+    await syncPartnerStats(partner.id);
 
     sendSuccess(res, {}, 'Delivery confirmed with proof');
   } catch (err) {

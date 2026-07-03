@@ -42,16 +42,16 @@ export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, hasHydrated } = useAuthStore();
 
   useEffect(() => {
-    if (!isAuthenticated) router.push('/login');
-  }, [isAuthenticated, router]);
+    if (hasHydrated && !isAuthenticated) router.push('/login');
+  }, [hasHydrated, isAuthenticated, router]);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', id],
     queryFn: () => api.get(`/api/orders/${id}?include=deliveryPartner`).then(r => r.data.data),
-    enabled: isAuthenticated,
+    enabled: hasHydrated && isAuthenticated,
     // Poll every 30 s while order is active
     refetchInterval: (query) => {
       const status = query.state.data?.status;
@@ -59,6 +59,8 @@ export default function OrderDetailPage() {
       return 30_000;
     },
   });
+
+  if (!hasHydrated) return null;
 
   const { mutate: cancel, isPending } = useMutation({
     mutationFn: () => api.patch(`/api/orders/${id}/cancel`),

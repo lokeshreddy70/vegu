@@ -20,8 +20,9 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
-    // Log to console in dev; replace with Sentry/Datadog in prod
-    console.error('[VEGU ErrorBoundary]', { portal: this.props.portal, error: error.message, stack: info.componentStack });
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[VEGU ErrorBoundary]', { portal: this.props.portal, error: error.message, stack: info.componentStack });
+    }
   }
 
   render() {

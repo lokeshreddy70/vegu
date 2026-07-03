@@ -640,19 +640,47 @@ export const getUsersSummary = async (_req: Request, res: Response): Promise<voi
 // ── Notifications ────────────────────────────────────────────────────────────
 
 export const broadcastNotification = async (req: Request, res: Response): Promise<void> => {
-  const { title, message, type, userIds } = z.object({
-    title: z.string().min(2),
-    message: z.string().min(2),
+  const { title, message, type, userIds, audience } = z.object({
+    title: z.string().min(2).max(200),
+    message: z.string().min(2).max(1000).optional(),
+    body: z.string().min(2).max(1000).optional(),
     type: z.string().default('info'),
+    audience: z.enum(['ALL', 'CUSTOMERS', 'VENDORS', 'RIDERS']).default('ALL'),
     userIds: z.array(z.string()).optional(),
-  }).parse(req.body);
+  }).transform((data) => ({
+    ...data,
+    message: data.message ?? data.body ?? '',
+  })).parse(req.body);
+
+  if (!message) {
+    sendError(res, 'Message is required', 400);
+    return;
+  }
 
   let targets: string[];
   if (userIds && userIds.length > 0) {
     targets = userIds;
   } else {
-    const users = await prisma.user.findMany({ where: { isActive: true }, select: { id: true } });
+    const roleByAudience: Record<string, 'CUSTOMER' | 'VENDOR' | 'DELIVERY' | null> = {
+      ALL: null,
+      CUSTOMERS: 'CUSTOMER',
+      VENDORS: 'VENDOR',
+      RIDERS: 'DELIVERY',
+    };
+    const role = roleByAudience[audience] ?? null;
+    const users = await prisma.user.findMany({
+      where: {
+        isActive: true,
+        ...(role ? { role } : {}),
+      },
+      select: { id: true },
+    });
     targets = users.map(u => u.id);
+  }
+
+  if (targets.length === 0) {
+    sendSuccess(res, { sent: 0 }, 'No active users found for selected audience');
+    return;
   }
 
   await prisma.notification.createMany({

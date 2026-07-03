@@ -11,6 +11,14 @@ type StoreSettings = {
   storeCurrency?: string; storeTimezone?: string;
   minOrderAmount?: number; deliveryFee?: number; freeDeliveryThreshold?: number;
   taxRate?: number; maintenanceMode?: boolean;
+  supportPhone?: string; supportWhatsApp?: string; supportEmail?: string;
+  officeAddress?: string; supportHours?: string; emergencySupport?: string;
+  aboutTitle?: string; aboutDescription?: string;
+  contactTitle?: string; contactDescription?: string;
+  paymentMethods?: string; faqJson?: string;
+  privacyPolicy?: string; termsAndConditions?: string;
+  riderSafetyPolicy?: string;
+  refundPolicy?: string; cancellationPolicy?: string; shippingPolicy?: string;
 };
 
 const inp = 'w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500 transition-colors';
@@ -43,6 +51,8 @@ export default function SettingsPage() {
     { id: 'delivery', label: 'Delivery', icon: Truck },
     { id: 'commerce', label: 'Commerce', icon: Percent },
     { id: 'contact', label: 'Contact', icon: Phone },
+    { id: 'public', label: 'Public Pages', icon: Settings },
+    { id: 'legal', label: 'Legal', icon: Mail },
   ];
 
   if (isLoading) return (
@@ -102,7 +112,7 @@ export default function SettingsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-zinc-400 mb-1">Currency</label>
-                  <select value={merged.storeCurrency ?? 'INR'} onChange={e => update('storeCurrency', e.target.value)} className={inp}>
+                  <select title="Currency" value={merged.storeCurrency ?? 'INR'} onChange={e => update('storeCurrency', e.target.value)} className={inp}>
                     <option value="INR">INR (₹)</option>
                     <option value="USD">USD ($)</option>
                     <option value="EUR">EUR (€)</option>
@@ -110,7 +120,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-zinc-400 mb-1">Timezone</label>
-                  <select value={merged.storeTimezone ?? 'Asia/Kolkata'} onChange={e => update('storeTimezone', e.target.value)} className={inp}>
+                  <select title="Timezone" value={merged.storeTimezone ?? 'Asia/Kolkata'} onChange={e => update('storeTimezone', e.target.value)} className={inp}>
                     <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
                     <option value="UTC">UTC</option>
                     <option value="America/New_York">America/New_York</option>
@@ -183,8 +193,94 @@ export default function SettingsPage() {
                 <input type="tel" value={merged.storePhone ?? ''} onChange={e => update('storePhone', e.target.value)} className={inp} placeholder="+91 98765 43210" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1 flex items-center gap-1"><Globe className="w-3 h-3" /> Website</label>
-                <input type="url" className={inp} placeholder="https://vegu.com" />
+                <label className="block text-xs font-medium text-zinc-400 mb-1 flex items-center gap-1"><Phone className="w-3 h-3" /> Public Support Phone</label>
+                <input type="tel" value={merged.supportPhone ?? ''} onChange={e => update('supportPhone', e.target.value)} className={inp} placeholder="+91-1800-8348-4357" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">WhatsApp Support</label>
+                <input type="text" value={merged.supportWhatsApp ?? ''} onChange={e => update('supportWhatsApp', e.target.value)} className={inp} placeholder="+91-90000-00000" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Public Support Email</label>
+                <input type="email" value={merged.supportEmail ?? ''} onChange={e => update('supportEmail', e.target.value)} className={inp} placeholder="support@vegu.app" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Support Hours</label>
+                <input type="text" value={merged.supportHours ?? ''} onChange={e => update('supportHours', e.target.value)} className={inp} placeholder="9:00 AM - 9:00 PM, Monday to Sunday" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Office Address</label>
+                <textarea title="Office address" value={merged.officeAddress ?? ''} onChange={e => update('officeAddress', e.target.value)} className={inp} rows={2} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Emergency Support Message</label>
+                <textarea title="Emergency support message" value={merged.emergencySupport ?? ''} onChange={e => update('emergencySupport', e.target.value)} className={inp} rows={2} />
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'public' && (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Globe className="w-4 h-4 text-emerald-400" />
+                <h2 className="text-sm font-semibold text-white">Public Content</h2>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">About Title</label>
+                <input title="About title" type="text" value={merged.aboutTitle ?? ''} onChange={e => update('aboutTitle', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">About Description</label>
+                <textarea title="About description" value={merged.aboutDescription ?? ''} onChange={e => update('aboutDescription', e.target.value)} className={inp} rows={4} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Contact Title</label>
+                <input title="Contact title" type="text" value={merged.contactTitle ?? ''} onChange={e => update('contactTitle', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Contact Description</label>
+                <textarea title="Contact description" value={merged.contactDescription ?? ''} onChange={e => update('contactDescription', e.target.value)} className={inp} rows={3} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Payment Methods JSON</label>
+                <textarea title="Payment methods JSON" value={merged.paymentMethods ?? ''} onChange={e => update('paymentMethods', e.target.value)} className={inp} rows={4} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">FAQ JSON</label>
+                <textarea title="FAQ JSON" value={merged.faqJson ?? ''} onChange={e => update('faqJson', e.target.value)} className={inp} rows={6} />
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'legal' && (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Mail className="w-4 h-4 text-emerald-400" />
+                <h2 className="text-sm font-semibold text-white">Legal Policies</h2>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Privacy Policy</label>
+                <textarea title="Privacy policy" value={merged.privacyPolicy ?? ''} onChange={e => update('privacyPolicy', e.target.value)} className={inp} rows={5} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Terms & Conditions</label>
+                <textarea title="Terms and conditions" value={merged.termsAndConditions ?? ''} onChange={e => update('termsAndConditions', e.target.value)} className={inp} rows={5} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Rider Safety & Compliance</label>
+                <textarea title="Rider safety and compliance" value={merged.riderSafetyPolicy ?? ''} onChange={e => update('riderSafetyPolicy', e.target.value)} className={inp} rows={5} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Refund Policy</label>
+                <textarea title="Refund policy" value={merged.refundPolicy ?? ''} onChange={e => update('refundPolicy', e.target.value)} className={inp} rows={4} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Cancellation Policy</label>
+                <textarea title="Cancellation policy" value={merged.cancellationPolicy ?? ''} onChange={e => update('cancellationPolicy', e.target.value)} className={inp} rows={4} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Shipping Policy</label>
+                <textarea title="Shipping policy" value={merged.shippingPolicy ?? ''} onChange={e => update('shippingPolicy', e.target.value)} className={inp} rows={4} />
               </div>
             </div>
           )}

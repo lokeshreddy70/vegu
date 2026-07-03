@@ -4,6 +4,40 @@ import { prisma } from '../prisma/client';
 import { sendSuccess, sendError, sendPaginated } from '../utils/response';
 import { AuthRequest, ProductQuery } from '../types';
 
+const buildBazaarSnapshot = async () => {
+  const productSelect = {
+    id: true, name: true, slug: true, price: true, comparePrice: true,
+    images: true, unit: true, stock: true, discount: true,
+    rating: true, reviewCount: true, createdAt: true,
+    category: { select: { name: true, slug: true } },
+  };
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const [freshArrivals, lowStock, trending] = await Promise.all([
+    prisma.product.findMany({
+      where: { isAvailable: true, stock: { gt: 0 }, createdAt: { gte: sevenDaysAgo } },
+      select: productSelect,
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    }),
+    prisma.product.findMany({
+      where: { isAvailable: true, stock: { gt: 0, lte: 20 } },
+      select: productSelect,
+      orderBy: { stock: 'asc' },
+      take: 10,
+    }),
+    prisma.product.findMany({
+      where: { isAvailable: true, stock: { gt: 0 }, isTrending: true },
+      select: productSelect,
+      orderBy: { reviewCount: 'desc' },
+      take: 10,
+    }),
+  ]);
+
+  return { freshArrivals, lowStock, trending };
+};
+
 export const getProducts = async (req: Request, res: Response): Promise<void> => {
   const q = req.query as ProductQuery;
   const page = Math.max(1, parseInt(q.page || '1') || 1);
@@ -92,37 +126,31 @@ export const getTrendingProducts = async (_req: Request, res: Response): Promise
 };
 
 export const getBazaarProducts = async (_req: Request, res: Response): Promise<void> => {
-  const productSelect = {
-    id: true, name: true, slug: true, price: true, comparePrice: true,
-    images: true, unit: true, stock: true, discount: true,
-    rating: true, reviewCount: true, createdAt: true,
-    category: { select: { name: true, slug: true } },
+  const data = await buildBazaarSnapshot();
+  sendSuccess(res, data);
+};
+
+export const streamBazaarProducts = async (req: Request, res: Response): Promise<void> => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  const sendSnapshot = async () => {
+    const data = await buildBazaarSnapshot();
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
 
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  await sendSnapshot();
+  const timer = setInterval(() => {
+    void sendSnapshot();
+  }, 30000);
 
-  const [freshArrivals, lowStock, trending] = await Promise.all([
-    prisma.product.findMany({
-      where: { isAvailable: true, stock: { gt: 0 }, createdAt: { gte: sevenDaysAgo } },
-      select: productSelect,
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-    }),
-    prisma.product.findMany({
-      where: { isAvailable: true, stock: { gt: 0, lte: 20 } },
-      select: productSelect,
-      orderBy: { stock: 'asc' },
-      take: 10,
-    }),
-    prisma.product.findMany({
-      where: { isAvailable: true, stock: { gt: 0 }, isTrending: true },
-      select: productSelect,
-      orderBy: { reviewCount: 'desc' },
-      take: 10,
-    }),
-  ]);
-
-  sendSuccess(res, { freshArrivals, lowStock, trending });
+  req.on('close', () => {
+    clearInterval(timer);
+    res.end();
+  });
 };
 
 export const createReview = async (req: AuthRequest, res: Response): Promise<void> => {

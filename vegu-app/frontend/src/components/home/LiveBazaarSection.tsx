@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Plus, Minus } from 'lucide-react';
 import { useCartStore } from '@/store/cart.store';
 import { syncAddToCart, syncUpdateCartItem } from '@/lib/cartSync';
+import { resolveApiBase } from '@/lib/apiBase';
 import { formatPrice } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -128,22 +129,45 @@ function BazaarRow({
 
 export default function LiveBazaarSection() {
   const [data, setData] = useState<BazaarData | null>(null);
-  const [tick, setTick] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-    fetch(`${apiUrl}/api/products/bazaar`)
-      .then(r => r.json())
-      .then(j => { if (j.data) setData(j.data); })
-      .catch(() => {});
-  }, [tick]);
+    const apiUrl = resolveApiBase('');
+    const streamUrl = `${apiUrl}/api/products/bazaar/stream`;
+
+    const fallbackFetch = () => {
+      fetch(`${apiUrl}/api/products/bazaar`)
+        .then(r => r.json())
+        .then(j => { if (j.data) setData(j.data); })
+        .catch(() => {});
+    };
+
+    fallbackFetch();
+
+    const evt = new EventSource(streamUrl);
+    evt.onmessage = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.data) as BazaarData;
+        setData(parsed);
+      } catch {
+        // ignore malformed events
+      }
+    };
+    evt.onerror = () => {
+      evt.close();
+      // Fallback polling when streaming is unavailable
+      intervalRef.current = setInterval(fallbackFetch, 60000);
+    };
+
+    return () => {
+      evt.close();
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
 
   useEffect(() => {
-    // Refresh every 60s
-    intervalRef.current = setInterval(() => setTick(t => t + 1), 60_000);
-    // Pulse the LIVE dot
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    // Keep LIVE pulse animation mounted
+    return () => {};
   }, []);
 
   const hasAny = data && (data.freshArrivals.length > 0 || data.lowStock.length > 0 || data.trending.length > 0);

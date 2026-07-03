@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { z } from 'zod';
 import { config } from '../config';
 import { sendError } from '../utils/response';
+import { logger } from '../utils/logger';
 import { AuthRequest } from '../types';
 
 const SYSTEM_PROMPT = `You are VEGU's AI Kitchen Assistant — a smart, friendly culinary companion.
@@ -80,6 +81,6 @@ export const kitchenChat = async (req: AuthRequest, res: Response): Promise<void
   } catch (err) {
     res.write(`data: ${JSON.stringify({ error: 'AI service unavailable' })}\n\n`);
     res.end();
-    console.error('Kitchen AI error:', err);
+    logger.error('Kitchen AI error', { error: err });
   }
 };

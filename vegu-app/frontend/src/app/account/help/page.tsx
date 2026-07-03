@@ -2,8 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Send, Bot, User, Leaf, RotateCcw } from 'lucide-react';
 import api from '@/lib/api';
+import { getPublicConfig } from '@/lib/publicConfig';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -18,14 +20,30 @@ const QUICK_QUESTIONS = [
   'Is there free delivery?',
 ];
 
-function formatMarkdown(text: string) {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br />');
+function renderMessageContent(text: string): JSX.Element[] {
+  const lines = text.split('\n');
+  return lines.map((line, lineIdx) => {
+    const segments = line.split(/(\*\*[^*]+\*\*)/g);
+    return (
+      <span key={`line-${lineIdx}`}>
+        {segments.map((seg, segIdx) => {
+          if (seg.startsWith('**') && seg.endsWith('**')) {
+            return <strong key={`seg-${lineIdx}-${segIdx}`}>{seg.slice(2, -2)}</strong>;
+          }
+          return <span key={`seg-${lineIdx}-${segIdx}`}>{seg}</span>;
+        })}
+        {lineIdx < lines.length - 1 ? <br /> : null}
+      </span>
+    );
+  });
 }
 
 export default function HelpPage() {
   const router = useRouter();
+  const { data: publicConfig } = useQuery({
+    queryKey: ['public-config'],
+    queryFn: getPublicConfig,
+  });
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -56,7 +74,7 @@ export default function HelpPage() {
     } catch {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'Sorry, I\'m having trouble responding right now. Please email **support@vegu.app** for help.',
+        content: `Sorry, I\'m having trouble responding right now. Please email **${publicConfig?.supportEmail || 'support@vegu.app'}** or call **${publicConfig?.supportPhone || '+91-1800-8348-4357'}** for help.`,
         source: 'faq',
       }]);
     } finally {
@@ -87,7 +105,9 @@ export default function HelpPage() {
             <p className="text-white font-bold text-sm">Vegu Support</p>
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-emerald-400 text-[10px] font-semibold">Online · Typically replies instantly</span>
+              <span className="text-emerald-400 text-[10px] font-semibold">
+                Online · {publicConfig?.supportHours || 'Typically replies instantly'}
+              </span>
             </div>
           </div>
         </div>
@@ -118,8 +138,9 @@ export default function HelpPage() {
                     ? 'bg-gold text-black font-medium rounded-tr-sm'
                     : 'bg-app-card border border-app-border text-zinc-200 rounded-tl-sm'
                 }`}
-                dangerouslySetInnerHTML={{ __html: formatMarkdown(msg.content) }}
-              />
+              >
+                {renderMessageContent(msg.content)}
+              </div>
               {msg.source === 'ai' && msg.role === 'assistant' && (
                 <span className="text-[9px] text-zinc-600 px-1">AI powered</span>
               )}
@@ -135,9 +156,9 @@ export default function HelpPage() {
             </div>
             <div className="bg-app-card border border-app-border rounded-2xl rounded-tl-sm px-4 py-3">
               <div className="flex gap-1 items-center h-4">
-                <span className="w-2 h-2 rounded-full bg-zinc-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 rounded-full bg-zinc-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 rounded-full bg-zinc-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span className="w-2 h-2 rounded-full bg-zinc-500 animate-bounce" />
+                <span className="w-2 h-2 rounded-full bg-zinc-500 animate-bounce" />
+                <span className="w-2 h-2 rounded-full bg-zinc-500 animate-bounce" />
               </div>
             </div>
           </div>

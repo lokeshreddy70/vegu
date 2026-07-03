@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import {
   Package, MapPin, Heart, LogOut, ChevronRight, Bell,
-  Star, HelpCircle, Info, CreditCard, Edit2, Leaf, ChefHat, Shield,
+  Star, HelpCircle, Info, CreditCard, Edit2, Leaf, ChefHat, Shield, Trash2,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
@@ -33,6 +33,19 @@ export default function AccountPage() {
     try { await api.post('/api/auth/logout', { refreshToken: rt }); } catch { /* ignore */ }
     logout();
     router.push('/');
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm('Delete your account permanently? This action cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      await api.delete('/api/auth/me');
+      logout();
+      router.push('/');
+    } catch {
+      window.alert('Unable to delete account right now. Please try again.');
+    }
   };
 
   const menuItems = [
@@ -137,6 +150,15 @@ export default function AccountPage() {
         >
           <LogOut className="w-4 h-4" />
           Sign Out
+        </button>
+
+        <button
+          type="button"
+          onClick={handleDeleteAccount}
+          className="w-full mt-3 flex items-center justify-center gap-2 py-3.5 bg-white border border-red-200 text-red-600 rounded-2xl font-semibold text-sm hover:bg-red-50 transition-colors"
+        >
+          <Trash2 className="w-4 h-4" />
+          Delete Account
         </button>
       </div>
     </div>

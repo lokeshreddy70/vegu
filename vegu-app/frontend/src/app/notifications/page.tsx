@@ -34,18 +34,20 @@ const typeColor: Record<string, string> = {
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, hasHydrated } = useAuthStore();
   const qc = useQueryClient();
 
   useEffect(() => {
-    if (!isAuthenticated) router.push('/login');
-  }, [isAuthenticated, router]);
+    if (hasHydrated && !isAuthenticated) router.push('/login');
+  }, [hasHydrated, isAuthenticated, router]);
 
   const { data: notifications = [], isLoading } = useQuery<Notification[]>({
     queryKey: ['notifications'],
     queryFn: () => api.get('/api/notifications').then(r => r.data.data),
-    enabled: isAuthenticated,
+    enabled: hasHydrated && isAuthenticated,
   });
+
+  if (!hasHydrated) return null;
 
   const { mutate: markAllRead } = useMutation({
     mutationFn: () => api.patch('/api/notifications/read-all'),

@@ -28,20 +28,22 @@ const STATUS_CONFIG: Record<string, { label: string; textColor: string; bgColor:
 
 export default function OrdersPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, hasHydrated } = useAuthStore();
   const [page, setPage] = useState(1);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
 
   useEffect(() => {
-    if (!isAuthenticated) router.push('/login');
-  }, [isAuthenticated, router]);
+    if (hasHydrated && !isAuthenticated) router.push('/login');
+  }, [hasHydrated, isAuthenticated, router]);
 
   const { data, isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: ['orders', page],
     queryFn: () => api.get('/api/orders', { params: { page, limit: 10 } }).then(r => r.data),
-    enabled: isAuthenticated,
+    enabled: hasHydrated && isAuthenticated,
     retry: 2,
   });
+
+  if (!hasHydrated) return null;
 
   useEffect(() => {
     if (data?.data) {

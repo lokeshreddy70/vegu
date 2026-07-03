@@ -10,16 +10,17 @@ import toast from 'react-hot-toast';
 
 export default function RiderProfilePage() {
   const router = useRouter();
-  const { user, logout, refreshToken } = useRiderAuthStore();
+  const { user, hasHydrated, logout, refreshToken } = useRiderAuthStore();
 
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!user || user.role !== 'DELIVERY') router.push('/rider/login');
-  }, [user, router]);
+  }, [hasHydrated, user, router]);
 
   const { data, isError } = useQuery({
     queryKey: ['rider-dashboard'],
     queryFn: () => riderApi.get('/api/rider/dashboard').then(r => r.data.data),
-    enabled: !!user,
+    enabled: hasHydrated && !!user,
   });
 
   const handleLogout = async () => {
@@ -32,7 +33,7 @@ export default function RiderProfilePage() {
     }
   };
 
-  if (!user) return null;
+  if (!hasHydrated || !user) return null;
 
   if (isError) {
     return (

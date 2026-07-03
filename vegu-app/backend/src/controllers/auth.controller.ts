@@ -180,3 +180,31 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
   });
   sendSuccess(res, user, 'Profile updated');
 };
+
+export const deleteMyAccount = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.userId;
+  const existing = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true } });
+
+  if (!existing) {
+    sendError(res, 'User not found', 404);
+    return;
+  }
+
+  const anonymizedEmail = `deleted+${existing.id}@vegu.app`;
+
+  await prisma.$transaction([
+    prisma.refreshToken.deleteMany({ where: { userId } }),
+    prisma.user.update({
+      where: { id: userId },
+      data: {
+        isActive: false,
+        email: anonymizedEmail,
+        phone: null,
+        name: 'Deleted User',
+        avatar: null,
+      },
+    }),
+  ]);
+
+  sendSuccess(res, null, 'Account deleted successfully');
+};

@@ -20,17 +20,19 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-2 text-sm">
-              {['Products', 'Categories', 'Deals', 'About Us'].map(l => (
-                <li key={l}><Link href="#" className="hover:text-white transition-colors">{l}</Link></li>
-              ))}
+              <li><Link href="/products" className="hover:text-white transition-colors">Products</Link></li>
+              <li><Link href="/categories" className="hover:text-white transition-colors">Categories</Link></li>
+              <li><Link href="/faq" className="hover:text-white transition-colors">FAQ</Link></li>
+              <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="text-white font-semibold mb-4">Support</h4>
             <ul className="space-y-2 text-sm">
-              {['Help Center', 'Track Order', 'Returns', 'Contact Us'].map(l => (
-                <li key={l}><Link href="#" className="hover:text-white transition-colors">{l}</Link></li>
-              ))}
+              <li><Link href="/account/help" className="hover:text-white transition-colors">Help Center</Link></li>
+              <li><Link href="/orders" className="hover:text-white transition-colors">Track Order</Link></li>
+              <li><Link href="/legal/refund" className="hover:text-white transition-colors">Returns & Refunds</Link></li>
+              <li><Link href="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
             </ul>
           </div>
         </div>

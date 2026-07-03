@@ -11,6 +11,9 @@ import {
   Leaf, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { resolveApiBase } from '@/lib/apiBase';
+
+const apiBase = resolveApiBase('');
 
 const NAV = [
   { href: '/admin',               label: 'Dashboard',      icon: LayoutDashboard, exact: true },
@@ -31,17 +34,17 @@ const NAV = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, isAuthenticated, logout, accessToken, refreshToken } = useAuthStore();
+  const { user, isAuthenticated, hasHydrated, logout, accessToken, refreshToken } = useAuthStore();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== 'ADMIN') router.replace('/login');
-  }, [isAuthenticated, user, router]);
+    if (hasHydrated && (!isAuthenticated || user?.role !== 'ADMIN')) router.replace('/login');
+  }, [hasHydrated, isAuthenticated, user, router]);
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', {
+      await fetch(`${apiBase}/api/auth/logout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ refreshToken }),
@@ -51,7 +54,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push('/login');
   };
 
-  if (!isAuthenticated || user?.role !== 'ADMIN') return null;
+  if (!hasHydrated || !isAuthenticated || user?.role !== 'ADMIN') return null;
 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(href + '/');

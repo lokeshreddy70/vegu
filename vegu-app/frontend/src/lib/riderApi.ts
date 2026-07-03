@@ -1,10 +1,9 @@
 import axios from 'axios';
 import { useRiderAuthStore } from '@/store/rider-auth.store';
+import { resolveApiBase } from '@/lib/apiBase';
 
 const baseURL =
-  typeof window === 'undefined'
-    ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
-    : '';
+  resolveApiBase();
 
 const riderApi = axios.create({
   baseURL,

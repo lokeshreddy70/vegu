@@ -53,6 +53,41 @@ const statusColors: Record<string, string> = {
   BUSY: 'bg-yellow-500',
 };
 
+const PROOF_QUEUE_KEY = 'vegu-rider-proof-queue';
+
+type QueuedProof = {
+  orderId: string;
+  imageBase64: string;
+  lat?: number;
+  lng?: number;
+  queuedAt: string;
+};
+
+const readProofQueue = (): QueuedProof[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    return JSON.parse(localStorage.getItem(PROOF_QUEUE_KEY) || '[]') as QueuedProof[];
+  } catch {
+    return [];
+  }
+};
+
+const writeProofQueue = (items: QueuedProof[]) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(PROOF_QUEUE_KEY, JSON.stringify(items));
+};
+
+const upsertProofQueue = (item: QueuedProof) => {
+  const queue = readProofQueue();
+  const filtered = queue.filter((q) => q.orderId !== item.orderId);
+  writeProofQueue([...filtered, item]);
+};
+
+const removeProofQueue = (orderId: string) => {
+  const queue = readProofQueue();
+  writeProofQueue(queue.filter((q) => q.orderId !== orderId));
+};
+
 // ── Proof of Delivery Modal ──────────────────────────────────────────────────
 function ProofModal({ orderId, onClose, onSuccess }: {
   orderId: string;
@@ -61,6 +96,9 @@ function ProofModal({ orderId, onClose, onSuccess }: {
 }) {
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [queuedOffline, setQueuedOffline] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -72,6 +110,55 @@ function ProofModal({ orderId, onClose, onSuccess }: {
       );
     }
   }, []);
+
+  const uploadProof = useCallback(async (imageBase64: string) => {
+    setUploadProgress(1);
+    await riderApi.post(
+      `/api/rider/orders/${orderId}/proof`,
+      {
+        imageBase64,
+        lat: location?.lat,
+        lng: location?.lng,
+      },
+      {
+        onUploadProgress: (ev) => {
+          const total = ev.total || ev.loaded || 1;
+          const pct = Math.max(1, Math.min(100, Math.round((ev.loaded / total) * 100)));
+          setUploadProgress(pct);
+        },
+      }
+    );
+  }, [orderId, location?.lat, location?.lng]);
+
+  useEffect(() => {
+    const flushQueuedProof = async () => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+      const queued = readProofQueue().find((q) => q.orderId === orderId);
+      if (!queued) return;
+
+      setUploading(true);
+      setQueuedOffline(true);
+      setLastError(null);
+      try {
+        await uploadProof(queued.imageBase64);
+        removeProofQueue(orderId);
+        toast.success('Queued proof uploaded successfully');
+        onSuccess();
+      } catch {
+        // Keep queued until next online retry
+      } finally {
+        setUploading(false);
+      }
+    };
+
+    void flushQueuedProof();
+
+    const onOnline = () => {
+      void flushQueuedProof();
+    };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [onSuccess, orderId, uploadProof]);
 
   const compressImage = useCallback((file: File): Promise<string> => {
     return new Promise((resolve) => {
@@ -100,22 +187,39 @@ function ProofModal({ orderId, onClose, onSuccess }: {
   const handleCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setLastError(null);
+    setQueuedOffline(false);
+    setUploadProgress(0);
     setPreview(await compressImage(file));
   };
 
   const handleSubmit = async () => {
     if (!preview) return;
     setUploading(true);
+    setLastError(null);
     try {
-      await riderApi.post(`/api/rider/orders/${orderId}/proof`, {
-        imageBase64: preview,
-        lat: location?.lat,
-        lng: location?.lng,
-      });
+      await uploadProof(preview);
+      removeProofQueue(orderId);
       toast.success('Delivery confirmed!');
       onSuccess();
     } catch (err: unknown) {
-      toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Upload failed');
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Upload failed';
+      const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+      if (isOffline) {
+        upsertProofQueue({
+          orderId,
+          imageBase64: preview,
+          lat: location?.lat,
+          lng: location?.lng,
+          queuedAt: new Date().toISOString(),
+        });
+        setQueuedOffline(true);
+        toast.success('No internet. Proof queued and will upload automatically.');
+      } else {
+        setLastError(message);
+        toast.error(message);
+      }
     } finally {
       setUploading(false);
     }
@@ -163,7 +267,7 @@ function ProofModal({ orderId, onClose, onSuccess }: {
           </button>
         )}
 
-        <input ref={fileRef} type="file" accept="image/*" capture="environment"
+        <input ref={fileRef} type="file" accept="image/*"
           aria-label="Capture delivery photo" title="Capture delivery photo"
           className="hidden" onChange={handleCapture} />
 
@@ -172,6 +276,28 @@ function ProofModal({ orderId, onClose, onSuccess }: {
             📸 Photo will be shared with the customer as delivery confirmation.
           </p>
         </div>
+
+        {uploading && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+              <span>Uploading proof</span>
+              <span>{uploadProgress}%</span>
+            </div>
+            <progress className="w-full h-2" value={uploadProgress} max={100} />
+          </div>
+        )}
+
+        {queuedOffline && (
+          <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-xs text-yellow-800">
+            Upload is queued for retry. It will auto-submit when internet is back.
+          </div>
+        )}
+
+        {lastError && !uploading && (
+          <button type="button" onClick={handleSubmit} className="w-full mb-4 border border-red-200 text-red-600 py-3 rounded-2xl font-semibold text-sm">
+            Retry Upload
+          </button>
+        )}
 
         {preview ? (
           <button type="button" onClick={handleSubmit} disabled={uploading}
@@ -193,7 +319,7 @@ function ProofModal({ orderId, onClose, onSuccess }: {
 export default function RiderDashboard() {
   const router = useRouter();
   const qc = useQueryClient();
-  const { user, logout } = useRiderAuthStore();
+  const { user, hasHydrated, logout } = useRiderAuthStore();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [proofOrderId, setProofOrderId] = useState<string | null>(null);
 
@@ -240,11 +366,12 @@ export default function RiderDashboard() {
   });
 
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!user) router.push('/rider/login');
     else if (user.role !== 'DELIVERY') router.push('/rider/login');
-  }, [user, router]);
+  }, [hasHydrated, user, router]);
 
-  if (!user || user.role !== 'DELIVERY') return null;
+  if (!hasHydrated || !user || user.role !== 'DELIVERY') return null;
 
   if (isLoading) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -270,6 +397,13 @@ export default function RiderDashboard() {
 
   const { partner, activeOrder, todayDeliveries, pendingOrders } = data;
   const isOnline = partner.status === 'AVAILABLE';
+  const offlineQueuedCount = readProofQueue().length;
+  const readinessChecks = [
+    { label: 'API Session', ok: !!useRiderAuthStore.getState().accessToken },
+    { label: 'GPS Available', ok: typeof navigator !== 'undefined' && 'geolocation' in navigator },
+    { label: 'Network', ok: typeof navigator === 'undefined' ? true : navigator.onLine },
+    { label: 'Proof Queue Empty', ok: offlineQueuedCount === 0 },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
@@ -313,6 +447,26 @@ export default function RiderDashboard() {
       </div>
 
       <div className="px-4 mt-4 space-y-4">
+
+        {/* Rider readiness */}
+        <div className="bg-white rounded-2xl shadow-sm p-4 border border-gray-100">
+          <h2 className="font-bold text-gray-900 mb-3 text-sm">Rider App Health</h2>
+          <div className="grid grid-cols-2 gap-2">
+            {readinessChecks.map((c) => (
+              <div key={c.label} className="flex items-center justify-between px-3 py-2 rounded-xl bg-gray-50 border border-gray-100">
+                <span className="text-xs text-gray-700 font-medium">{c.label}</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                  {c.ok ? 'OK' : 'CHECK'}
+                </span>
+              </div>
+            ))}
+          </div>
+          {offlineQueuedCount > 0 && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 mt-3">
+              {offlineQueuedCount} proof upload(s) queued offline.
+            </p>
+          )}
+        </div>
 
         {/* Active Order */}
         {activeOrder && (

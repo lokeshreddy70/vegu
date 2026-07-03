@@ -34,8 +34,8 @@ function getSignal(p: {
   return null;
 }
 
-export const getPriceSignals = async (_req: Request, res: Response): Promise<void> => {
-  // Pull candidates in one query — apply signal logic in memory
+const buildPriceSignalsSnapshot = async () => {
+  // Pull candidates in one query and apply signal logic in memory
   const products = await prisma.product.findMany({
     where: {
       isAvailable: true,
@@ -77,5 +77,33 @@ export const getPriceSignals = async (_req: Request, res: Response): Promise<voi
     grouped[p.signal.type].push(p);
   }
 
-  sendSuccess(res, { all: withSignals, grouped });
+  return { all: withSignals, grouped };
+};
+
+export const getPriceSignals = async (_req: Request, res: Response): Promise<void> => {
+  const data = await buildPriceSignalsSnapshot();
+  sendSuccess(res, data);
+};
+
+export const streamPriceSignals = async (req: Request, res: Response): Promise<void> => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  const sendSnapshot = async () => {
+    const data = await buildPriceSignalsSnapshot();
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  await sendSnapshot();
+  const timer = setInterval(() => {
+    void sendSnapshot();
+  }, 30000);
+
+  req.on('close', () => {
+    clearInterval(timer);
+    res.end();
+  });
 };

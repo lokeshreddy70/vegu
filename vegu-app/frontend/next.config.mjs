@@ -9,10 +9,12 @@ const nextConfig = {
     ],
   },
   async rewrites() {
+    const rawApiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const apiBase = rawApiBase.replace(/\/+$/, '').replace(/\/api$/, '');
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/:path*`,
+        destination: `${apiBase}/api/:path*`,
       },
     ];
   },

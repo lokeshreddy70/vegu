@@ -5,6 +5,10 @@ import { sendSuccess, sendPaginated } from '../../utils/response';
 const SETTING_KEYS = [
   'storeName', 'storeEmail', 'storePhone', 'storeCurrency', 'storeTimezone',
   'minOrderAmount', 'deliveryFee', 'freeDeliveryThreshold', 'taxRate', 'maintenanceMode',
+  'supportPhone', 'supportWhatsApp', 'supportEmail', 'officeAddress', 'supportHours', 'emergencySupport',
+  'aboutTitle', 'aboutDescription', 'contactTitle', 'contactDescription',
+  'paymentMethods', 'faqJson',
+  'privacyPolicy', 'termsAndConditions', 'riderSafetyPolicy', 'refundPolicy', 'cancellationPolicy', 'shippingPolicy',
 ] as const;
 
 export const getSettings = async (_req: Request, res: Response): Promise<void> => {

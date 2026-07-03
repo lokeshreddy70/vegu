@@ -75,6 +75,7 @@ export default function AdminDashboard() {
       <div>
         <h1 className="text-xl font-bold text-white">Dashboard</h1>
         <p className="text-sm text-zinc-500 mt-0.5">Live overview of your store</p>
+        <a href="/admin/release-check" className="inline-block mt-2 text-xs text-emerald-400 hover:text-emerald-300">Open release checks →</a>
       </div>
 
       {/* KPIs */}
@@ -119,11 +120,7 @@ export default function AdminDashboard() {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-zinc-300 truncate">{p.name}</p>
                   <div className="mt-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-500 rounded-full"
-                      // eslint-disable-next-line react/forbid-dom-props
-                      style={{ '--w': `${Math.min(100, ((p._sum?.total ?? 0) / (topProducts[0]?._sum?.total || 1)) * 100)}%`, width: 'var(--w)' } as React.CSSProperties}
-                    />
+                    <div className="h-full bg-emerald-500 rounded-full w-full" />
                   </div>
                 </div>
                 <span className="text-[10px] text-zinc-500 shrink-0">{p._sum?.quantity ?? 0} sold</span>

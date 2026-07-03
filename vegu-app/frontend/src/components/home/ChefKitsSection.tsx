@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X, ChefHat, ShoppingCart, Check } from 'lucide-react';
 import { useCartStore } from '@/store/cart.store';
 import { syncAddToCart } from '@/lib/cartSync';
+import { resolveApiBase } from '@/lib/apiBase';
 import { formatPrice } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -123,7 +124,7 @@ interface AddedProduct {
 }
 
 async function fetchIngredients(ingredients: KitIngredient[]): Promise<AddedProduct[]> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+  const apiUrl = resolveApiBase('');
   const results: AddedProduct[] = [];
   await Promise.allSettled(
     ingredients.map(async (ing) => {

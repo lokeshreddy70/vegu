@@ -19,13 +19,12 @@ export interface AuthUser {
   } | null;
 }
 
-const INACTIVITY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-
 interface AuthStore {
   user: AuthUser | null;
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  hasHydrated: boolean;
   lastActivity: number | null;
   setAuth: (user: AuthUser, accessToken: string, refreshToken: string) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
@@ -43,8 +42,8 @@ const safeStorage = {
   },
 };
 
-const BLANK: Pick<AuthStore, 'user' | 'accessToken' | 'refreshToken' | 'isAuthenticated' | 'lastActivity'> = {
-  user: null, accessToken: null, refreshToken: null, isAuthenticated: false, lastActivity: null,
+const BLANK: Pick<AuthStore, 'user' | 'accessToken' | 'refreshToken' | 'isAuthenticated' | 'lastActivity' | 'hasHydrated'> = {
+  user: null, accessToken: null, refreshToken: null, isAuthenticated: false, hasHydrated: false, lastActivity: null,
 };
 
 export const useAuthStore = create<AuthStore>()(
@@ -71,7 +70,7 @@ export const useAuthStore = create<AuthStore>()(
       logout: () => {
         safeStorage.remove('accessToken');
         safeStorage.remove('refreshToken');
-        set(BLANK);
+        set({ ...BLANK, hasHydrated: true });
       },
 
       touchActivity: () => set({ lastActivity: Date.now() }),
@@ -83,18 +82,17 @@ export const useAuthStore = create<AuthStore>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
+        lastActivity: state.lastActivity,
       }),
       // On every app start: if a DELIVERY user slipped into this store (stale data),
       // clear them — riders exclusively use vegu-rider-auth
       onRehydrateStorage: () => (state) => {
         if (!state) return;
+        state.hasHydrated = true;
         if (state.user?.role === 'DELIVERY') {
           Object.assign(state, BLANK);
+          state.hasHydrated = true;
           return;
-        }
-        // Auto-logout after 30 days of inactivity
-        if (state.lastActivity && Date.now() - state.lastActivity > INACTIVITY_MS) {
-          Object.assign(state, BLANK);
         }
       },
     }

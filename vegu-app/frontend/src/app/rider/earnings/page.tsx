@@ -9,19 +9,20 @@ import { useRiderAuthStore } from '@/store/rider-auth.store';
 
 export default function RiderEarningsPage() {
   const router = useRouter();
-  const { user } = useRiderAuthStore();
+  const { user, hasHydrated } = useRiderAuthStore();
 
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!user || user.role !== 'DELIVERY') router.push('/rider/login');
-  }, [user, router]);
+  }, [hasHydrated, user, router]);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['rider-dashboard'],
     queryFn: () => riderApi.get('/api/rider/dashboard').then(r => r.data.data),
-    enabled: !!user,
+    enabled: hasHydrated && !!user,
   });
 
-  if (!user) return null;
+  if (!hasHydrated || !user) return null;
 
   if (isError) {
     return (

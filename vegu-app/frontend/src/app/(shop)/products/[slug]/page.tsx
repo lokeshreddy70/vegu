@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Heart, Share2, Minus, Plus, Star, Truck, Shield, RotateCcw, ShoppingBag } from 'lucide-react';
@@ -10,13 +10,17 @@ import api from '@/lib/api';
 import { useCartStore } from '@/store/cart.store';
 import { syncAddToCart } from '@/lib/cartSync';
 import { formatPrice } from '@/lib/utils';
+import { useAuthStore } from '@/store/auth.store';
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
   const [qty, setQty] = useState(1);
   const [imgIdx, setImgIdx] = useState(0);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistBusy, setWishlistBusy] = useState(false);
   const { addItem, getItem, updateQuantity } = useCartStore();
+  const { isAuthenticated } = useAuthStore();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['product', slug],
@@ -51,6 +55,26 @@ export default function ProductDetailPage() {
   const product = data;
   const cartItem = getItem(product.id);
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadWishlistState = async () => {
+      if (!isAuthenticated) {
+        setIsWishlisted(false);
+        return;
+      }
+      try {
+        const res = await api.get(`/api/wishlist/${product.id}/check`);
+        if (!cancelled) setIsWishlisted(!!res.data?.data?.isWishlisted);
+      } catch {
+        if (!cancelled) setIsWishlisted(false);
+      }
+    };
+    loadWishlistState();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, product.id]);
+
   const handleAddToCart = () => {
     addItem({ id: product.id, name: product.name, slug: product.slug, price: product.price, images: product.images, unit: product.unit, stock: product.stock }, qty);
     syncAddToCart(product.id, qty);
@@ -68,6 +92,56 @@ export default function ProductDetailPage() {
   };
 
   const displayQty = cartItem ? cartItem.quantity : qty;
+
+  const handleToggleWishlist = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please login to use wishlist');
+      router.push('/login');
+      return;
+    }
+    if (wishlistBusy) return;
+
+    setWishlistBusy(true);
+    try {
+      if (isWishlisted) {
+        await api.delete(`/api/wishlist/${product.id}`);
+        setIsWishlisted(false);
+        toast.success('Removed from wishlist');
+      } else {
+        await api.post('/api/wishlist', { productId: product.id });
+        setIsWishlisted(true);
+        toast.success('Added to wishlist');
+      }
+    } catch {
+      toast.error('Could not update wishlist right now');
+    } finally {
+      setWishlistBusy(false);
+    }
+  };
+
+  const handleShare = async () => {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    const payload = {
+      title: product.name,
+      text: `${product.name} on Vegu`,
+      url,
+    };
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share(payload);
+        return;
+      }
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        toast.success('Product link copied');
+        return;
+      }
+      toast.error('Share is not supported on this device');
+    } catch {
+      toast.error('Share canceled');
+    }
+  };
 
   return (
     <div className="pb-28 bg-[#F7F9FA]">
@@ -88,10 +162,16 @@ export default function ProductDetailPage() {
             <ArrowLeft className="w-4 h-4 text-gray-700" />
           </button>
           <div className="flex gap-2">
-            <button type="button" aria-label="Add to wishlist" className="w-9 h-9 bg-white/80 backdrop-blur-md rounded-xl flex items-center justify-center shadow-sm">
-              <Heart className="w-4 h-4 text-gray-700" />
+            <button
+              type="button"
+              aria-label="Add to wishlist"
+              onClick={handleToggleWishlist}
+              disabled={wishlistBusy}
+              className="w-9 h-9 bg-white/80 backdrop-blur-md rounded-xl flex items-center justify-center shadow-sm disabled:opacity-50"
+            >
+              <Heart className={`w-4 h-4 ${isWishlisted ? 'text-red-500 fill-red-500' : 'text-gray-700'}`} />
             </button>
-            <button type="button" aria-label="Share product" className="w-9 h-9 bg-white/80 backdrop-blur-md rounded-xl flex items-center justify-center shadow-sm">
+            <button type="button" aria-label="Share product" onClick={handleShare} className="w-9 h-9 bg-white/80 backdrop-blur-md rounded-xl flex items-center justify-center shadow-sm">
               <Share2 className="w-4 h-4 text-gray-700" />
             </button>
           </div>

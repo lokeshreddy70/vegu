@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { TrendingDown, Flame, Zap, TrendingUp, Plus, Minus } from 'lucide-react';
 import { useCartStore } from '@/store/cart.store';
 import { syncAddToCart, syncUpdateCartItem } from '@/lib/cartSync';
+import { resolveApiBase } from '@/lib/apiBase';
 import { formatPrice } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -97,11 +98,38 @@ export default function PriceFlowSection() {
   const [products, setProducts] = useState<SignalProduct[]>([]);
 
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-    fetch(`${apiUrl}/api/products/price-signals`)
-      .then(r => r.json())
-      .then(j => { if (j.data?.all) setProducts(j.data.all); })
-      .catch(() => {});
+    const apiUrl = resolveApiBase('');
+
+    const fallbackFetch = () => {
+      fetch(`${apiUrl}/api/products/price-signals`)
+        .then(r => r.json())
+        .then(j => { if (j.data?.all) setProducts(j.data.all); })
+        .catch(() => {});
+    };
+
+    fallbackFetch();
+
+    const evt = new EventSource(`${apiUrl}/api/products/price-signals/stream`);
+    let timer: NodeJS.Timeout | null = null;
+
+    evt.onmessage = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.data) as { all: SignalProduct[] };
+        if (parsed?.all) setProducts(parsed.all);
+      } catch {
+        // ignore malformed payload
+      }
+    };
+
+    evt.onerror = () => {
+      evt.close();
+      timer = setInterval(fallbackFetch, 60000);
+    };
+
+    return () => {
+      evt.close();
+      if (timer) clearInterval(timer);
+    };
   }, []);
 
   if (products.length === 0) return null;

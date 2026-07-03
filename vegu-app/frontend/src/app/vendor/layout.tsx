@@ -14,13 +14,15 @@ const navItems = [
 ];
 
 export default function VendorLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated, hasHydrated, logout } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== 'VENDOR') router.push('/login');
-  }, [isAuthenticated, user, router]);
+    if (hasHydrated && (!isAuthenticated || user?.role !== 'VENDOR')) router.push('/login');
+  }, [hasHydrated, isAuthenticated, user, router]);
+
+  if (!hasHydrated || !isAuthenticated || user?.role !== 'VENDOR') return null;
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');

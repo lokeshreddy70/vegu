@@ -25,6 +25,8 @@ interface Address {
   state: string;
   pincode: string;
   isDefault: boolean;
+  lat?: number;
+  lng?: number;
 }
 
 const schema = z.object({
@@ -37,30 +39,80 @@ const schema = z.object({
   state: z.string().min(2, 'State required'),
   pincode: z.string().min(6, 'Valid pincode required'),
   isDefault: z.boolean().default(false),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
 
 export default function AddressesPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, hasHydrated } = useAuthStore();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Address | null>(null);
+  const [locating, setLocating] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) router.push('/login');
-  }, [isAuthenticated, router]);
+    if (hasHydrated && !isAuthenticated) router.push('/login');
+  }, [hasHydrated, isAuthenticated, router]);
 
   const { data: addresses = [], isLoading } = useQuery<Address[]>({
     queryKey: ['addresses'],
     queryFn: () => api.get('/api/addresses').then(r => r.data.data),
-    enabled: isAuthenticated,
+    enabled: hasHydrated && isAuthenticated,
   });
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
+  if (!hasHydrated) return null;
+
+  const { register, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
+
+  const useCurrentLocation = async () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      toast.error('Geolocation is not supported on this device');
+      return;
+    }
+
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setValue('lat', latitude);
+        setValue('lng', longitude);
+
+        try {
+          const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`;
+          const res = await fetch(url, {
+            headers: { Accept: 'application/json' },
+          });
+          const data = await res.json();
+          const addr = data?.address || {};
+
+          const line1 = [addr.house_number, addr.road].filter(Boolean).join(' ').trim();
+          const city = addr.city || addr.town || addr.village || '';
+          const state = addr.state || '';
+          const pincode = addr.postcode || '';
+
+          if (line1) setValue('line1', line1, { shouldDirty: true });
+          if (city) setValue('city', city, { shouldDirty: true });
+          if (state) setValue('state', state, { shouldDirty: true });
+          if (pincode) setValue('pincode', pincode, { shouldDirty: true });
+          toast.success('Current location captured');
+        } catch {
+          toast.success('Location captured. Please fill remaining address fields.');
+        } finally {
+          setLocating(false);
+        }
+      },
+      () => {
+        toast.error('Location permission denied or unavailable');
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+    );
+  };
 
   const { mutate: deleteAddr } = useMutation({
     mutationFn: (id: string) => api.delete(`/api/addresses/${id}`),
@@ -110,6 +162,15 @@ export default function AddressesPage() {
           >
             <div className="card p-6">
               <h2 className="font-bold text-gray-900 text-lg mb-5">{editing ? 'Edit Address' : 'New Address'}</h2>
+              <button
+                type="button"
+                onClick={useCurrentLocation}
+                disabled={locating}
+                className="mb-4 inline-flex items-center gap-2 rounded-xl border border-veg/30 bg-veg/5 px-3 py-2 text-sm font-semibold text-veg disabled:opacity-50"
+              >
+                <MapPin className="w-4 h-4" />
+                {locating ? 'Getting current location...' : 'Use current location'}
+              </button>
               <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Label</label>

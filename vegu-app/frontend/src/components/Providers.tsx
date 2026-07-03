@@ -35,9 +35,12 @@ function SessionValidator() {
           logout();
         }
       })
-      .catch(() => {
-        // Token invalid or expired beyond refresh
-        logout();
+      .catch((err: unknown) => {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        // Only force logout on definite auth failures.
+        if (status === 401 || status === 403) {
+          logout();
+        }
       });
   }, [isAuthenticated, user, pathname, setAuth, logout]);
 

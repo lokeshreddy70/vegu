@@ -25,6 +25,7 @@ import couponRoutes from './routes/coupon.routes';
 import supportRoutes from './routes/support.routes';
 import kitchenRoutes from './routes/kitchen.routes';
 import trustedRiderRoutes from './routes/trusted-rider.routes';
+import publicRoutes from './routes/public.routes';
 
 const app = express();
 
@@ -167,6 +168,7 @@ app.use('/api/coupons', couponRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/kitchen', kitchenRoutes);
 app.use('/api/trusted-riders', trustedRiderRoutes);
+app.use('/api/public', publicRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

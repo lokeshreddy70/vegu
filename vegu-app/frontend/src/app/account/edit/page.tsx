@@ -22,11 +22,13 @@ type FormData = z.infer<typeof schema>;
 
 export default function EditProfilePage() {
   const router = useRouter();
-  const { user, isAuthenticated, updateUser } = useAuthStore();
+  const { user, isAuthenticated, hasHydrated, updateUser } = useAuthStore();
 
   useEffect(() => {
-    if (!isAuthenticated) router.push('/login');
-  }, [isAuthenticated, router]);
+    if (hasHydrated && !isAuthenticated) router.push('/login');
+  }, [hasHydrated, isAuthenticated, router]);
+
+  if (!hasHydrated) return null;
 
   const { register, handleSubmit, formState: { errors, isSubmitting, isDirty } } = useForm<FormData>({
     resolver: zodResolver(schema),

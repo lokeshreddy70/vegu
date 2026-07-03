@@ -1,9 +1,12 @@
 import BottomNav from '@/components/layout/BottomNav';
 import HomeClient from '@/components/home/HomeClient';
+import { resolveApiBase } from '@/lib/apiBase';
+
+const apiBase = resolveApiBase();
 
 async function getCategories() {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/categories`, {
+    const res = await fetch(`${apiBase}/api/categories`, {
       next: { revalidate: 300 },
     });
     if (!res.ok) return [];
@@ -16,7 +19,7 @@ async function getCategories() {
 
 async function getFeatured() {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/products/featured`, {
+    const res = await fetch(`${apiBase}/api/products/featured`, {
       next: { revalidate: 60 },
     });
     if (!res.ok) return [];
@@ -29,7 +32,7 @@ async function getFeatured() {
 
 async function getTrending() {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/products/trending`, {
+    const res = await fetch(`${apiBase}/api/products/trending`, {
       next: { revalidate: 60 },
     });
     if (!res.ok) return [];
