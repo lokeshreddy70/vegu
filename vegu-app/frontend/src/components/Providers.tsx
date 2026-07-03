@@ -67,6 +67,42 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       })
   );
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const vv = window.visualViewport;
+    const root = document.documentElement;
+    const body = document.body;
+    const threshold = 120;
+
+    const syncKeyboardState = () => {
+      if (!vv) return;
+      const keyboardOpen = window.innerHeight - vv.height > threshold;
+      root.classList.toggle('keyboard-open', keyboardOpen);
+      body.classList.toggle('keyboard-open', keyboardOpen);
+    };
+
+    const onFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const tag = target.tagName;
+      const isField = tag === 'INPUT' || tag === 'TEXTAREA' || target.getAttribute('contenteditable') === 'true';
+      if (!isField) return;
+      setTimeout(() => target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 120);
+    };
+
+    vv?.addEventListener('resize', syncKeyboardState);
+    window.addEventListener('focusin', onFocusIn);
+    syncKeyboardState();
+
+    return () => {
+      vv?.removeEventListener('resize', syncKeyboardState);
+      window.removeEventListener('focusin', onFocusIn);
+      root.classList.remove('keyboard-open');
+      body.classList.remove('keyboard-open');
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={client}>
       <SplashScreen />

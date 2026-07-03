@@ -188,7 +188,8 @@ export default function HomeClient({ categories, featured, trending }: {
       {/* ── Categories ── */}
       {categories.length > 0 && (
         <div className="bg-white border-b border-gray-100 py-4">
-          <div className="flex gap-4 px-4 overflow-x-auto pb-0.5 scrollbar-hide">
+          <div className="container-page">
+            <div className="flex gap-4 overflow-x-auto pb-0.5 scrollbar-hide">
             {categories.slice(0, 10).map((cat) => (
               <Link key={cat.id} href={`/products?category=${cat.slug}`} className="flex flex-col items-center gap-1.5 shrink-0">
                 <div className="w-16 h-16 rounded-full bg-[#F0FBF4] border-2 border-transparent flex items-center justify-center overflow-hidden">
@@ -207,12 +208,13 @@ export default function HomeClient({ categories, featured, trending }: {
               </div>
               <span className="text-gray-500 text-[10px] font-semibold">See all</span>
             </Link>
+            </div>
           </div>
         </div>
       )}
 
       {/* ── Hero Banner ── */}
-      <div className="px-4 pt-4 pb-2">
+      <div className="container-page pt-4 pb-2">
         <div className={`relative rounded-3xl overflow-hidden h-[140px] bg-gradient-to-r ${banners[activeHero].gradient}`}>
           {/* Decorative emoji */}
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-6xl opacity-30 select-none">{banners[activeHero].emoji}</div>
@@ -267,7 +269,7 @@ export default function HomeClient({ categories, featured, trending }: {
       {/* ── Top Picks ── */}
       {allProducts.length > 0 && (
         <div className="pt-4 pb-2">
-          <div className="flex items-center justify-between px-4 mb-3">
+          <div className="container-page flex items-center justify-between mb-3">
             <div>
               <h2 className="text-gray-900 font-bold text-base">Top Picks for You</h2>
               <p className="text-gray-400 text-xs">Handpicked fresh products</p>
@@ -276,7 +278,7 @@ export default function HomeClient({ categories, featured, trending }: {
               See all <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-3 px-4">
+          <div className="container-page responsive-grid-products">
             {allProducts.slice(0, 6).map((product) => (
               <HomeProductCard key={product.id} product={product} />
             ))}
@@ -328,7 +330,7 @@ export default function HomeClient({ categories, featured, trending }: {
       {/* ── Trending ── */}
       {trending.length > 0 && (
         <div className="pb-4">
-          <div className="flex items-center justify-between px-4 mb-3">
+          <div className="container-page flex items-center justify-between mb-3">
             <div>
               <h2 className="text-gray-900 font-bold text-base">Trending Now 🔥</h2>
               <p className="text-gray-400 text-xs">Most ordered this week</p>
@@ -337,7 +339,7 @@ export default function HomeClient({ categories, featured, trending }: {
               See all <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-3 px-4">
+          <div className="container-page responsive-grid-products">
             {trending.slice(0, 4).map((product) => (
               <HomeProductCard key={product.id} product={product} />
             ))}

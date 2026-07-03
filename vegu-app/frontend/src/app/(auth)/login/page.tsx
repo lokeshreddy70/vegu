@@ -43,9 +43,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F9FA] flex flex-col">
+    <div className="min-h-screen bg-[#F7F9FA] flex flex-col md:justify-center md:py-8">
       {/* Green top banner */}
-      <div className="bg-veg px-6 pt-14 pb-10 flex flex-col items-center">
+      <div className="keyboard-hide bg-veg px-6 pt-14 pb-10 flex flex-col items-center md:max-w-2xl md:mx-auto md:w-full md:rounded-3xl md:pt-10 md:pb-8">
         <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-md mb-3">
           <Leaf className="w-7 h-7 text-veg" />
         </div>
@@ -54,8 +54,8 @@ export default function LoginPage() {
       </div>
 
       {/* White card form */}
-      <div className="flex-1 bg-[#F7F9FA] px-5 pt-8">
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+      <div className="flex-1 bg-[#F7F9FA] px-5 pt-8 md:max-w-2xl md:mx-auto md:w-full md:pt-5">
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-7">
           <h1 className="text-gray-900 font-bold text-xl mb-1">Welcome back! 👋</h1>
           <p className="text-gray-500 text-sm mb-6">Sign in to continue shopping</p>
 
