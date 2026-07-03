@@ -6,6 +6,34 @@ import { sendError } from '../utils/response';
 import { logger } from '../utils/logger';
 import { AuthRequest } from '../types';
 
+type CacheEntry = { text: string; expiresAt: number };
+const KITCHEN_CACHE_TTL_MS = 5 * 60 * 1000;
+const KITCHEN_CACHE_MAX = 200;
+const kitchenCache = new Map<string, CacheEntry>();
+
+function buildCacheKey(userId: string | undefined, messages: Array<{ role: 'user' | 'assistant'; content: string }>): string {
+  const scope = userId || 'guest';
+  const payload = messages.map((m) => `${m.role}:${m.content}`).join('|').slice(-6000);
+  return `${scope}:${payload}`;
+}
+
+function getCached(key: string): string | null {
+  const hit = kitchenCache.get(key);
+  if (!hit) return null;
+  if (Date.now() > hit.expiresAt) {
+    kitchenCache.delete(key);
+    return null;
+  }
+  return hit.text;
+}
+
+function setCached(key: string, text: string): void {
+  kitchenCache.set(key, { text, expiresAt: Date.now() + KITCHEN_CACHE_TTL_MS });
+  if (kitchenCache.size <= KITCHEN_CACHE_MAX) return;
+  const oldest = kitchenCache.keys().next().value;
+  if (oldest) kitchenCache.delete(oldest);
+}
+
 const SYSTEM_PROMPT = `You are VEGU's AI Kitchen Assistant — a smart, friendly culinary companion.
 
 You help users:
@@ -52,6 +80,15 @@ export const kitchenChat = async (req: AuthRequest, res: Response): Promise<void
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
 
+  const cacheKey = buildCacheKey(req.user?.userId, parsed.data.messages);
+  const cached = getCached(cacheKey);
+  if (cached) {
+    res.write(`data: ${JSON.stringify({ text: cached })}\n\n`);
+    res.write('data: [DONE]\n\n');
+    res.end();
+    return;
+  }
+
   try {
     const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
     const model = genAI.getGenerativeModel({
@@ -68,12 +105,18 @@ export const kitchenChat = async (req: AuthRequest, res: Response): Promise<void
 
     const chat = model.startChat({ history });
     const stream = await chat.sendMessageStream(lastMessage);
+    let fullText = '';
 
     for await (const chunk of stream.stream) {
       const text = chunk.text();
       if (text) {
+        fullText += text;
         res.write(`data: ${JSON.stringify({ text })}\n\n`);
       }
+    }
+
+    if (fullText.trim()) {
+      setCached(cacheKey, fullText);
     }
 
     res.write('data: [DONE]\n\n');

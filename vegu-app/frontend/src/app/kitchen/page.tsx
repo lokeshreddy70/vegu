@@ -89,6 +89,8 @@ export default function KitchenPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const speechRef = useRef<SpeechRec | null>(null);
+  const inFlightKeyRef = useRef<string | null>(null);
+  const memoryCacheRef = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -97,6 +99,24 @@ export default function KitchenPage() {
   useEffect(() => {
     return () => { abortRef.current?.abort(); };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem('vegu-kitchen-cache');
+      if (!raw) return;
+      const entries = JSON.parse(raw) as Array<[string, string]>;
+      memoryCacheRef.current = new Map(entries.slice(-40));
+    } catch {}
+  }, []);
+
+  const persistCache = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const entries = Array.from(memoryCacheRef.current.entries()).slice(-40);
+      localStorage.setItem('vegu-kitchen-cache', JSON.stringify(entries));
+    } catch {}
+  };
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -157,6 +177,20 @@ export default function KitchenPage() {
     if (!text.trim() || streaming) return;
     const userMsg: Message = { role: 'user', content: text.trim() };
     const history = [...messages, userMsg];
+    const apiMessages = history.map(m => ({ role: m.role, content: m.content }));
+    const cacheKey = apiMessages.map(m => `${m.role}:${m.content}`).join('|').slice(-4000);
+
+    const cached = memoryCacheRef.current.get(cacheKey);
+    if (cached) {
+      const { clean, ingredients } = extractIngredients(cached);
+      setMessages([...history, { role: 'assistant', content: clean, ingredients }]);
+      setInput('');
+      return;
+    }
+
+    if (inFlightKeyRef.current === cacheKey) return;
+    inFlightKeyRef.current = cacheKey;
+
     setMessages(history);
     setInput('');
     setStreaming(true);
@@ -165,7 +199,6 @@ export default function KitchenPage() {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const apiMessages = history.map(m => ({ role: m.role, content: m.content }));
     const assistantMsg: Message = { role: 'assistant', content: '' };
     setMessages([...history, assistantMsg]);
 
@@ -222,6 +255,14 @@ export default function KitchenPage() {
 
       // Extract ingredients from final text
       const { clean, ingredients } = extractIngredients(fullText);
+      if (fullText.trim()) {
+        memoryCacheRef.current.set(cacheKey, fullText);
+        if (memoryCacheRef.current.size > 50) {
+          const oldest = memoryCacheRef.current.keys().next().value;
+          if (oldest) memoryCacheRef.current.delete(oldest);
+        }
+        persistCache();
+      }
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = { role: 'assistant', content: clean, ingredients };
@@ -235,6 +276,7 @@ export default function KitchenPage() {
         return updated;
       });
     } finally {
+      inFlightKeyRef.current = null;
       setStreaming(false);
     }
   }, [messages, streaming, accessToken]);
@@ -316,7 +358,7 @@ export default function KitchenPage() {
                     className="min-w-[190px] rounded-2xl overflow-hidden border border-gray-100 bg-white shadow-sm text-left"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={r.image} alt={r.title} className="h-24 w-full object-cover" />
+                    <img src={r.image} alt={r.title} loading="lazy" decoding="async" className="h-24 w-full object-cover" />
                     <div className="p-3">
                       <p className="text-sm font-semibold text-gray-900">{r.title}</p>
                       <p className="text-[11px] text-veg mt-1">Tap to generate ingredients</p>
@@ -338,7 +380,7 @@ export default function KitchenPage() {
                       className="bg-white border border-gray-100 rounded-xl p-2 text-center shadow-sm"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.images?.[0] || ''} alt={p.name} className="h-12 w-full object-cover rounded-md mb-1" />
+                      <img src={p.images?.[0] || ''} alt={p.name} loading="lazy" decoding="async" className="h-12 w-full object-cover rounded-md mb-1" />
                       <p className="text-[11px] text-gray-700 line-clamp-2">{p.name}</p>
                     </button>
                   ))}

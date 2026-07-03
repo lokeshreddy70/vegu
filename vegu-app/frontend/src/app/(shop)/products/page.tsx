@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -10,21 +10,29 @@ import ProductCard from '@/components/product/ProductCard';
 function ProductsContent() {
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('q') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get('q') || '');
   const [category, setCategory] = useState(searchParams.get('category') || '');
   const [sortBy, setSortBy] = useState('newest');
   const [page, setPage] = useState(1);
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 250);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
     queryFn: () => api.get('/api/categories').then(r => r.data.data),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['products', { search, category, sortBy, page, featured: searchParams.get('featured'), trending: searchParams.get('trending') }],
+    queryKey: ['products', { search: debouncedSearch, category, sortBy, page, featured: searchParams.get('featured'), trending: searchParams.get('trending') }],
     queryFn: () =>
       api.get('/api/products', {
         params: {
-          search: search || undefined,
+          search: debouncedSearch || undefined,
           category: category || undefined,
           sortBy,
           page,
@@ -34,6 +42,8 @@ function ProductsContent() {
         },
       }).then(r => r.data),
     placeholderData: prev => prev,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
   });
 
   const products = data?.data || [];
@@ -72,6 +82,7 @@ function ProductsContent() {
         <div className="relative flex-1">
           <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
           <select
+            title="Filter by category"
             value={category}
             onChange={e => { setCategory(e.target.value); setPage(1); }}
             className="w-full bg-white border border-gray-200 rounded-xl pl-8 pr-3 py-2.5 text-sm text-gray-700 outline-none appearance-none shadow-sm"

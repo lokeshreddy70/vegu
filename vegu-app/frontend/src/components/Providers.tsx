@@ -53,8 +53,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60_000,
-            gcTime: 5 * 60_000,
+            staleTime: 2 * 60_000,
+            gcTime: 15 * 60_000,
             retry: (failureCount, error: unknown) => {
               // Don't retry 401/403/404 — those are definitive responses
               const status = (error as { response?: { status?: number } })?.response?.status;
