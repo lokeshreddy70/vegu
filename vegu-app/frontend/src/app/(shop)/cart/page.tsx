@@ -131,6 +131,11 @@ export default function CartPage() {
           value={note}
           onChange={e => setNote(e.target.value)}
           placeholder="Add a delivery note..."
+          autoComplete="on"
+          autoCorrect="on"
+          autoCapitalize="sentences"
+          spellCheck
+          enterKeyHint="done"
           className="bg-transparent flex-1 text-sm text-gray-700 placeholder:text-gray-400 outline-none"
         />
       </div>

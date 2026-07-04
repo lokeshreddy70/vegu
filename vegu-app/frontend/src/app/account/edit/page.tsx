@@ -76,13 +76,18 @@ export default function EditProfilePage() {
               label="Full Name"
               icon={<User className="w-4 h-4" />}
               placeholder="Your full name"
+              autoComplete="name"
+              enterKeyHint="next"
               error={errors.name?.message}
               {...register('name')}
             />
             <Input
               label="Phone Number"
               icon={<Phone className="w-4 h-4" />}
+              type="tel"
               placeholder="+91 9876543210"
+              autoComplete="tel"
+              enterKeyHint="done"
               error={errors.phone?.message}
               {...register('phone')}
             />

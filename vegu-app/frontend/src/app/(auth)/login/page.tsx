@@ -67,6 +67,12 @@ export default function LoginPage() {
                 <input
                   type="email"
                   placeholder="you@example.com"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  inputMode="email"
+                  enterKeyHint="next"
                   {...register('email')}
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-veg focus:ring-2 focus:ring-veg/10 transition-all"
                 />
@@ -81,6 +87,11 @@ export default function LoginPage() {
                 <input
                   type={showPass ? 'text' : 'password'}
                   placeholder="Your password"
+                  autoComplete="current-password"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  enterKeyHint="go"
                   {...register('password')}
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-10 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-veg focus:ring-2 focus:ring-veg/10 transition-all"
                 />

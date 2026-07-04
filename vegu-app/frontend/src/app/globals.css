@@ -30,6 +30,7 @@
 @layer base {
   :root {
     --font-inter: 'Inter', sans-serif;
+    --vegu-keyboard-offset: 0px;
   }
 
   * {
@@ -49,6 +50,10 @@
   }
 
   body.keyboard-open .keyboard-hide {
+    display: none !important;
+  }
+
+  body.keyboard-open .keyboard-static-bottom {
     display: none !important;
   }
 

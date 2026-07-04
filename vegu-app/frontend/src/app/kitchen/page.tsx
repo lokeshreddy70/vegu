@@ -488,6 +488,7 @@ export default function KitchenPage() {
             autoCorrect="on"
             autoCapitalize="sentences"
             spellCheck
+            enterKeyHint="send"
             placeholder="Ask for a recipe, meal plan, or ingredient ideas…"
             rows={1}
             className="flex-1 resize-none bg-gray-100 rounded-2xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-veg/20 max-h-32 leading-relaxed"

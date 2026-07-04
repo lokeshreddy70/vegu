@@ -117,6 +117,11 @@ export default function RiderLoginPage() {
                     type="email"
                     placeholder="Email address"
                     autoComplete="email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    inputMode="email"
+                    enterKeyHint="next"
                     {...register('email')}
                     className="w-full bg-white/[0.05] border border-white/[0.08] rounded-2xl pl-11 pr-4 py-3.5 text-sm text-white placeholder:text-white/25 outline-none focus:border-white/25 transition-all"
                   />
@@ -131,6 +136,10 @@ export default function RiderLoginPage() {
                     type={showPass ? 'text' : 'password'}
                     placeholder="Password"
                     autoComplete="current-password"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    enterKeyHint="go"
                     {...register('password')}
                     className="w-full bg-white/[0.05] border border-white/[0.08] rounded-2xl pl-11 pr-12 py-3.5 text-sm text-white placeholder:text-white/25 outline-none focus:border-white/25 transition-all"
                   />

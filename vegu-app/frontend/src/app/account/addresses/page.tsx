@@ -178,17 +178,17 @@ export default function AddressesPage() {
                     {labels.map(l => <option key={l} value={l}>{l}</option>)}
                   </select>
                 </div>
-                <Input label="Full Name" {...register('fullName')} error={errors.fullName?.message} placeholder="Rahul Sharma" />
-                <Input label="Phone" {...register('phone')} error={errors.phone?.message} placeholder="+91 9876543210" />
+                <Input label="Full Name" autoComplete="name" enterKeyHint="next" {...register('fullName')} error={errors.fullName?.message} placeholder="Rahul Sharma" />
+                <Input label="Phone" type="tel" autoComplete="tel" enterKeyHint="next" {...register('phone')} error={errors.phone?.message} placeholder="+91 9876543210" />
                 <div className="sm:col-span-2">
-                  <Input label="Address Line 1" {...register('line1')} error={errors.line1?.message} placeholder="House no., Street name" />
+                  <Input label="Address Line 1" autoComplete="address-line1" enterKeyHint="next" {...register('line1')} error={errors.line1?.message} placeholder="House no., Street name" />
                 </div>
                 <div className="sm:col-span-2">
-                  <Input label="Address Line 2 (optional)" {...register('line2')} placeholder="Landmark, Area" />
+                  <Input label="Address Line 2 (optional)" autoComplete="address-line2" enterKeyHint="next" {...register('line2')} placeholder="Landmark, Area" />
                 </div>
-                <Input label="City" {...register('city')} error={errors.city?.message} placeholder="Hyderabad" />
-                <Input label="State" {...register('state')} error={errors.state?.message} placeholder="Telangana" />
-                <Input label="Pincode" {...register('pincode')} error={errors.pincode?.message} placeholder="500001" />
+                <Input label="City" autoComplete="address-level2" enterKeyHint="next" {...register('city')} error={errors.city?.message} placeholder="Hyderabad" />
+                <Input label="State" autoComplete="address-level1" enterKeyHint="next" {...register('state')} error={errors.state?.message} placeholder="Telangana" />
+                <Input label="Pincode" autoComplete="postal-code" inputMode="numeric" enterKeyHint="done" {...register('pincode')} error={errors.pincode?.message} placeholder="500001" />
                 <div className="flex items-center gap-2 sm:col-span-2">
                   <input type="checkbox" id="isDefault" {...register('isDefault')} className="rounded" />
                   <label htmlFor="isDefault" className="text-sm text-gray-700 font-medium">Set as default address</label>

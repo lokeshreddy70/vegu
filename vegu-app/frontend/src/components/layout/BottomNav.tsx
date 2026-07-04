@@ -29,7 +29,7 @@ export default function BottomNav() {
     <>
       {/* Floating cart bar — visible when cart has items, hidden on cart/checkout pages */}
       {itemCount > 0 && pathname !== '/cart' && pathname !== '/checkout' && (
-        <div className="fixed bottom-16 left-4 right-4 z-50">
+        <div className="keyboard-hide fixed bottom-16 left-4 right-4 z-50">
           <Link
             href="/cart"
             className="flex items-center justify-between bg-gradient-to-r from-veg to-[#24b963] text-white px-5 py-3.5 rounded-2xl shadow-2xl shadow-veg/40 border border-white/20"
@@ -49,7 +49,7 @@ export default function BottomNav() {
       )}
 
       {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/60 bg-white/90 backdrop-blur-xl shadow-[0_-8px_24px_rgba(15,23,42,0.08)]">
+      <nav className="keyboard-hide fixed bottom-0 left-0 right-0 z-50 border-t border-white/60 bg-white/90 backdrop-blur-xl shadow-[0_-8px_24px_rgba(15,23,42,0.08)]">
         <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
           {tabs.map((tab) => {
             const active = isActive(tab);

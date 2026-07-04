@@ -138,6 +138,10 @@ export default function RiderRegisterPage() {
                   type="text"
                   placeholder="Full name"
                   autoComplete="name"
+                  autoCapitalize="words"
+                  autoCorrect="on"
+                  spellCheck
+                  enterKeyHint="next"
                   {...register('name')}
                   className="w-full bg-white/[0.05] border border-white/[0.08] rounded-2xl pl-11 pr-4 py-3.5 text-sm text-white placeholder:text-white/25 outline-none focus:border-white/25 transition-all"
                 />
@@ -153,6 +157,11 @@ export default function RiderRegisterPage() {
                   type="email"
                   placeholder="Email address"
                   autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  inputMode="email"
+                  enterKeyHint="next"
                   {...register('email')}
                   className="w-full bg-white/[0.05] border border-white/[0.08] rounded-2xl pl-11 pr-4 py-3.5 text-sm text-white placeholder:text-white/25 outline-none focus:border-white/25 transition-all"
                 />
@@ -166,6 +175,11 @@ export default function RiderRegisterPage() {
                 type="tel"
                 placeholder="Phone number"
                 autoComplete="tel"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                inputMode="tel"
+                enterKeyHint="next"
                 {...register('phone')}
                 className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-emerald-400 transition-all"
               />
@@ -180,6 +194,10 @@ export default function RiderRegisterPage() {
                   type={showPass ? 'text' : 'password'}
                   placeholder="Password (min. 8 chars)"
                   autoComplete="new-password"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  enterKeyHint="next"
                   {...register('password')}
                   className="w-full bg-white/[0.05] border border-white/[0.08] rounded-2xl pl-11 pr-12 py-3.5 text-sm text-white placeholder:text-white/25 outline-none focus:border-white/25 transition-all"
                 />
@@ -217,6 +235,10 @@ export default function RiderRegisterPage() {
                   type="text"
                   placeholder="Vehicle number (optional)"
                   autoComplete="off"
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  enterKeyHint="next"
                   {...register('vehicleNo')}
                   className="w-full bg-white/[0.05] border border-white/[0.08] rounded-2xl pl-11 pr-4 py-3.5 text-sm text-white placeholder:text-white/25 outline-none focus:border-white/25 transition-all"
                 />
@@ -229,6 +251,11 @@ export default function RiderRegisterPage() {
                 type="url"
                 placeholder="Profile photo URL (optional)"
                 autoComplete="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                inputMode="url"
+                enterKeyHint="done"
                 {...register('avatar')}
                 className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-emerald-400 transition-all"
               />

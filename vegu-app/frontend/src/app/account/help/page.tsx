@@ -91,7 +91,7 @@ export default function HelpPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-app-bg">
+    <div className="flex h-[100dvh] min-h-[100dvh] flex-col bg-app-bg">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-12 pb-4 bg-app-card border-b border-app-border shrink-0">
         <button type="button" aria-label="Go back" onClick={() => router.back()} className="w-9 h-9 bg-zinc-800 rounded-xl flex items-center justify-center">
@@ -194,6 +194,11 @@ export default function HelpPage() {
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); } }}
             placeholder="Type your message..."
+            autoComplete="on"
+            autoCorrect="on"
+            autoCapitalize="sentences"
+            spellCheck
+            enterKeyHint="send"
             disabled={loading}
             className="flex-1 bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-gold/50 disabled:opacity-50"
           />

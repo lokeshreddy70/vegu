@@ -45,7 +45,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-[#F7F9FA] flex flex-col">
       {/* Green top banner */}
-      <div className="bg-veg px-6 pt-14 pb-10 flex flex-col items-center">
+      <div className="keyboard-hide bg-veg px-6 pt-14 pb-10 flex flex-col items-center">
         <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-md mb-3">
           <Leaf className="w-7 h-7 text-veg" />
         </div>
@@ -67,6 +67,10 @@ export default function RegisterPage() {
                 <input
                   placeholder="Your full name"
                   autoComplete="name"
+                  autoCapitalize="words"
+                  autoCorrect="on"
+                  spellCheck
+                  enterKeyHint="next"
                   {...register('name')}
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-veg focus:ring-2 focus:ring-veg/10 transition-all"
                 />
@@ -82,6 +86,11 @@ export default function RegisterPage() {
                   type="email"
                   placeholder="you@example.com"
                   autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  inputMode="email"
+                  enterKeyHint="next"
                   {...register('email')}
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-veg focus:ring-2 focus:ring-veg/10 transition-all"
                 />
@@ -97,6 +106,10 @@ export default function RegisterPage() {
                   type={showPass ? 'text' : 'password'}
                   placeholder="Min. 8 characters"
                   autoComplete="new-password"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  enterKeyHint="done"
                   {...register('password')}
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-10 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-veg focus:ring-2 focus:ring-veg/10 transition-all"
                 />

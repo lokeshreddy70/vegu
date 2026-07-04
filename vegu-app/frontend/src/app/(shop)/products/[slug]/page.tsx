@@ -27,6 +27,32 @@ export default function ProductDetailPage() {
     queryFn: () => api.get(`/api/products/${slug}`).then(r => r.data.data),
   });
 
+  const product = data;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadWishlistState = async () => {
+      if (!product?.id) return;
+      if (!isAuthenticated) {
+        setIsWishlisted(false);
+        return;
+      }
+
+      try {
+        const res = await api.get(`/api/wishlist/${product.id}/check`);
+        if (!cancelled) setIsWishlisted(!!res.data?.data?.isWishlisted);
+      } catch {
+        if (!cancelled) setIsWishlisted(false);
+      }
+    };
+
+    loadWishlistState();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, product?.id]);
+
   if (isLoading) {
     return (
       <div className="pb-32">
@@ -52,28 +78,7 @@ export default function ProductDetailPage() {
     );
   }
 
-  const product = data;
   const cartItem = getItem(product.id);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadWishlistState = async () => {
-      if (!isAuthenticated) {
-        setIsWishlisted(false);
-        return;
-      }
-      try {
-        const res = await api.get(`/api/wishlist/${product.id}/check`);
-        if (!cancelled) setIsWishlisted(!!res.data?.data?.isWishlisted);
-      } catch {
-        if (!cancelled) setIsWishlisted(false);
-      }
-    };
-    loadWishlistState();
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated, product.id]);
 
   const handleAddToCart = () => {
     addItem({ id: product.id, name: product.name, slug: product.slug, price: product.price, images: product.images, unit: product.unit, stock: product.stock }, qty);
@@ -306,7 +311,7 @@ export default function ProductDetailPage() {
       </div>
 
       {/* Fixed bottom CTA */}
-      <div className="fixed bottom-16 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 px-4 py-3 flex items-center gap-3 shadow-lg">
+      <div className="keyboard-hide fixed bottom-16 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 px-4 py-3 flex items-center gap-3 shadow-lg">
         <div className="flex items-center gap-2 bg-gray-100 rounded-2xl px-3 py-2.5">
           <button type="button" aria-label="Decrease quantity" onClick={handleDec} className="w-7 h-7 flex items-center justify-center text-gray-600">
             <Minus className="w-3.5 h-3.5" />

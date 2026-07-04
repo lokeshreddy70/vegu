@@ -51,6 +51,11 @@ function SearchContent() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search for fruits, vegetables…"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              enterKeyHint="search"
               className="w-full bg-gray-100 rounded-xl pl-10 pr-9 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-veg/20 focus:bg-white transition-all"
             />
             {query && (

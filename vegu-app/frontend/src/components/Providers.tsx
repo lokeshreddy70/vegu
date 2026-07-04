@@ -48,6 +48,7 @@ function SessionValidator() {
 }
 
 export default function Providers({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [client] = useState(
     () =>
       new QueryClient({
@@ -75,33 +76,132 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     const body = document.body;
     const threshold = 120;
 
+    const setKeyboardOffset = (offset: number) => {
+      root.style.setProperty('--vegu-keyboard-offset', `${Math.max(0, offset)}px`);
+    };
+
+    const isEditableField = (target: EventTarget | null): target is HTMLInputElement | HTMLTextAreaElement => {
+      return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
+    };
+
+    const normalizeTextField = (field: HTMLInputElement | HTMLTextAreaElement) => {
+      const tag = field.tagName.toLowerCase();
+      const type = tag === 'textarea' ? 'textarea' : (field.getAttribute('type') || 'text').toLowerCase();
+      const tokens = [
+        field.name,
+        field.id,
+        field.placeholder,
+        field.autocomplete,
+        field.getAttribute('aria-label') || '',
+        field.getAttribute('title') || '',
+      ].join(' ').toLowerCase();
+
+      const isPassword = type === 'password';
+      const isEmail = type === 'email' || tokens.includes('email');
+      const isPhone = type === 'tel' || /\b(phone|mobile|whatsapp|contact)\b/.test(tokens);
+      const isUrl = type === 'url' || /\b(url|website|link|image)\b/.test(tokens);
+      const isSearch = type === 'search' || tokens.includes('search');
+      const isPostalCode = /\b(pincode|pin code|postcode|postal|zip)\b/.test(tokens);
+      const isOtp = /\b(otp|verification code|one time)\b/.test(tokens);
+      const isNumeric = type === 'number' || /\b(price|amount|stock|quantity|qty|discount|sort|threshold|limit|number)\b/.test(tokens);
+      const isCodeLike = /\b(coupon|promo|sku|vehicle no|vehicle number|code)\b/.test(tokens);
+      const isSlug = tokens.includes('slug');
+      const isNameLike = /\b(name|city|state|address|street|landmark)\b/.test(tokens);
+      const isMessageLike = /\b(message|note|comment|reply|question|description|policy|support)\b/.test(tokens);
+
+      if (!field.getAttribute('enterkeyhint')) {
+        if (isSearch) field.setAttribute('enterkeyhint', 'search');
+        else if (isMessageLike && tag === 'textarea') field.setAttribute('enterkeyhint', 'send');
+        else field.setAttribute('enterkeyhint', 'next');
+      }
+
+      if (!field.getAttribute('inputmode')) {
+        if (isEmail) field.setAttribute('inputmode', 'email');
+        else if (isPhone) field.setAttribute('inputmode', 'tel');
+        else if (isUrl) field.setAttribute('inputmode', 'url');
+        else if (isPostalCode || isOtp) field.setAttribute('inputmode', 'numeric');
+        else if (isNumeric) field.setAttribute('inputmode', type === 'number' ? 'decimal' : 'numeric');
+      }
+
+      if (!field.getAttribute('autocomplete')) {
+        if (isEmail) field.setAttribute('autocomplete', 'email');
+        else if (isPhone) field.setAttribute('autocomplete', 'tel');
+        else if (isUrl) field.setAttribute('autocomplete', 'url');
+        else if (isPostalCode) field.setAttribute('autocomplete', 'postal-code');
+        else if (isNameLike && tokens.includes('name')) field.setAttribute('autocomplete', 'name');
+        else if (!isPassword && !isSearch) field.setAttribute('autocomplete', 'on');
+      }
+
+      if (!field.getAttribute('autocapitalize')) {
+        if (isPassword || isEmail || isPhone || isUrl || isSearch || isPostalCode || isOtp || isNumeric || isSlug) {
+          field.setAttribute('autocapitalize', 'none');
+        } else if (isCodeLike) {
+          field.setAttribute('autocapitalize', 'characters');
+        } else if (isNameLike) {
+          field.setAttribute('autocapitalize', 'words');
+        } else {
+          field.setAttribute('autocapitalize', 'sentences');
+        }
+      }
+
+      if (!field.getAttribute('autocorrect')) {
+        field.setAttribute('autocorrect', isPassword || isEmail || isPhone || isUrl || isSearch || isPostalCode || isOtp || isNumeric || isCodeLike || isSlug ? 'off' : 'on');
+      }
+
+      if (!field.hasAttribute('spellcheck')) {
+        field.spellcheck = !(isPassword || isEmail || isPhone || isUrl || isSearch || isPostalCode || isOtp || isNumeric || isCodeLike || isSlug);
+      }
+    };
+
+    const revealField = (target: HTMLInputElement | HTMLTextAreaElement) => {
+      window.setTimeout(() => {
+        target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'auto' });
+      }, 90);
+    };
+
+    const normalizeAllInputs = () => {
+      document.querySelectorAll('input, textarea').forEach((node) => {
+        if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) {
+          normalizeTextField(node);
+        }
+      });
+    };
+
     const syncKeyboardState = () => {
-      if (!vv) return;
-      const keyboardOpen = window.innerHeight - vv.height > threshold;
+      const keyboardOffset = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+      const keyboardOpen = keyboardOffset > threshold;
       root.classList.toggle('keyboard-open', keyboardOpen);
       body.classList.toggle('keyboard-open', keyboardOpen);
+      setKeyboardOffset(keyboardOpen ? keyboardOffset : 0);
+
+      const active = document.activeElement;
+      if (keyboardOpen && isEditableField(active)) {
+        revealField(active);
+      }
     };
 
     const onFocusIn = (e: FocusEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      const tag = target.tagName;
-      const isField = tag === 'INPUT' || tag === 'TEXTAREA' || target.getAttribute('contenteditable') === 'true';
-      if (!isField) return;
-      setTimeout(() => target.scrollIntoView({ block: 'nearest', behavior: 'auto' }), 80);
+      const target = e.target;
+      if (!isEditableField(target)) return;
+      normalizeTextField(target);
+      revealField(target);
     };
 
+    normalizeAllInputs();
     vv?.addEventListener('resize', syncKeyboardState);
     window.addEventListener('focusin', onFocusIn);
+    window.addEventListener('orientationchange', syncKeyboardState);
     syncKeyboardState();
 
     return () => {
       vv?.removeEventListener('resize', syncKeyboardState);
       window.removeEventListener('focusin', onFocusIn);
+      window.removeEventListener('orientationchange', syncKeyboardState);
       root.classList.remove('keyboard-open');
       body.classList.remove('keyboard-open');
+      setKeyboardOffset(0);
     };
-  }, []);
+  }, [pathname]);
 
   return (
     <QueryClientProvider client={client}>

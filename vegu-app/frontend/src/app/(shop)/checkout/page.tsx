@@ -239,6 +239,11 @@ export default function CheckoutPage() {
                 onChange={e => setCouponInput(e.target.value.toUpperCase())}
                 onKeyDown={e => e.key === 'Enter' && applyCoupon()}
                 placeholder="Promo code"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                enterKeyHint="done"
                 className="bg-transparent text-sm flex-1 outline-none text-gray-700 placeholder:text-gray-400 uppercase"
               />
               <button type="button" onClick={applyCoupon}
