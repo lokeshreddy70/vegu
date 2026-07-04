@@ -107,7 +107,7 @@ export default function CheckoutPage() {
   return (
     <div className="bg-[#F7F9FA] min-h-screen pb-8">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 flex items-center gap-3 px-4 pt-12 pb-4 sticky top-0 z-10">
+      <div className="bg-white/95 backdrop-blur-md border-b border-gray-100 flex items-center gap-3 px-4 pt-12 pb-4 sticky top-0 z-10">
         <button type="button" aria-label="Go back" onClick={() => router.back()}
           className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center">
           <ArrowLeft className="w-4 h-4 text-gray-600" />
@@ -276,7 +276,7 @@ export default function CheckoutPage() {
         {/* Place Order CTA */}
         <button type="button" onClick={() => placeOrder()}
           disabled={isPending || !selectedAddress || items.length === 0}
-          className="w-full bg-veg text-white font-bold py-4 rounded-2xl text-sm flex items-center justify-center gap-2 disabled:opacity-40 shadow-lg shadow-veg/30 active:scale-[0.98] transition-all">
+          className="w-full bg-gradient-to-r from-veg to-[#21b65e] text-white font-bold py-4 rounded-2xl text-sm flex items-center justify-center gap-2 disabled:opacity-40 shadow-lg shadow-veg/30 active:scale-[0.98] transition-all border border-white/20">
           {isPending ? 'Placing Order…' : `Place Order — ${formatPrice(Math.max(0, total))}`}
         </button>
 

@@ -176,7 +176,7 @@ export default function KitchenPage() {
   const send = useCallback(async (text: string) => {
     if (!text.trim() || streaming) return;
     const userMsg: Message = { role: 'user', content: text.trim() };
-    const history = [...messages, userMsg];
+    const history = [...messages, userMsg].slice(-8);
     const apiMessages = history.map(m => ({ role: m.role, content: m.content }));
     const cacheKey = apiMessages.map(m => `${m.role}:${m.content}`).join('|').slice(-4000);
 
@@ -468,6 +468,10 @@ export default function KitchenPage() {
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input); }
             }}
+            autoComplete="on"
+            autoCorrect="on"
+            autoCapitalize="sentences"
+            spellCheck
             placeholder="Ask for a recipe, meal plan, or ingredient ideas…"
             rows={1}
             className="flex-1 resize-none bg-gray-100 rounded-2xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-veg/20 max-h-32 leading-relaxed"

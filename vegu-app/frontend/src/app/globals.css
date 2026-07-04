@@ -43,8 +43,9 @@
 
   html.keyboard-open,
   body.keyboard-open {
-    height: 100%;
-    overflow: hidden;
+    height: auto;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
   }
 
   body.keyboard-open .keyboard-hide {
@@ -135,7 +136,7 @@
   }
 
   .scroll-hidden::-webkit-scrollbar { display: none; }
-  .scroll-hidden { -ms-overflow-style: none; scrollbar-width: none; }
+  .scroll-hidden { -ms-overflow-style: none; }
 
   .line-clamp-2 {
     display: -webkit-box;

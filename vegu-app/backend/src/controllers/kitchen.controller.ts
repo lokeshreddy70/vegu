@@ -13,7 +13,10 @@ const kitchenCache = new Map<string, CacheEntry>();
 
 function buildCacheKey(userId: string | undefined, messages: Array<{ role: 'user' | 'assistant'; content: string }>): string {
   const scope = userId || 'guest';
-  const payload = messages.map((m) => `${m.role}:${m.content}`).join('|').slice(-6000);
+  const payload = messages
+    .map((m) => `${m.role}:${m.content.toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 400)}`)
+    .slice(-8)
+    .join('|');
   return `${scope}:${payload}`;
 }
 
@@ -59,7 +62,7 @@ const chatSchema = z.object({
   messages: z.array(z.object({
     role: z.enum(['user', 'assistant']),
     content: z.string().min(1).max(2000),
-  })).min(1).max(20),
+  })).min(1).max(16),
 });
 
 export const kitchenChat = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -96,12 +99,13 @@ export const kitchenChat = async (req: AuthRequest, res: Response): Promise<void
       systemInstruction: SYSTEM_PROMPT,
     });
 
-    const history = parsed.data.messages.slice(0, -1).map(m => ({
+    const recentMessages = parsed.data.messages.slice(-8);
+    const history = recentMessages.slice(0, -1).map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
     }));
 
-    const lastMessage = parsed.data.messages[parsed.data.messages.length - 1].content;
+    const lastMessage = recentMessages[recentMessages.length - 1].content;
 
     const chat = model.startChat({ history });
     const stream = await chat.sendMessageStream(lastMessage);

@@ -56,7 +56,7 @@ export default function CartPage() {
   return (
     <div className="bg-[#F7F9FA] min-h-screen pb-24">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 flex items-center gap-3 px-4 pt-12 pb-4 sticky top-0 z-10">
+      <div className="bg-white/95 backdrop-blur-md border-b border-gray-100 flex items-center gap-3 px-4 pt-12 pb-4 sticky top-0 z-10">
         <Link href="/products" className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center">
           <ArrowLeft className="w-4 h-4 text-gray-600" />
         </Link>
@@ -158,7 +158,7 @@ export default function CartPage() {
       <div className="mx-4 mt-4">
         <Link
           href="/checkout"
-          className="w-full flex items-center justify-between bg-veg text-white font-bold py-4 px-5 rounded-2xl text-sm shadow-lg shadow-veg/30"
+          className="w-full flex items-center justify-between bg-gradient-to-r from-veg to-[#22b85f] text-white font-bold py-4 px-5 rounded-2xl text-sm shadow-lg shadow-veg/30 border border-white/20"
         >
           <span>{items.reduce((s, i) => s + i.quantity, 0)} items · {formatPrice(total)}</span>
           <span className="text-base">Proceed to Checkout →</span>

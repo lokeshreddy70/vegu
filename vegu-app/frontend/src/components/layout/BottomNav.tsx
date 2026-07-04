@@ -32,7 +32,7 @@ export default function BottomNav() {
         <div className="fixed bottom-16 left-4 right-4 z-50">
           <Link
             href="/cart"
-            className="flex items-center justify-between bg-veg text-white px-5 py-3.5 rounded-2xl shadow-2xl shadow-veg/40"
+            className="flex items-center justify-between bg-gradient-to-r from-veg to-[#24b963] text-white px-5 py-3.5 rounded-2xl shadow-2xl shadow-veg/40 border border-white/20"
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
@@ -49,8 +49,8 @@ export default function BottomNav() {
       )}
 
       {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 shadow-lg">
-        <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-1">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/60 bg-white/90 backdrop-blur-xl shadow-[0_-8px_24px_rgba(15,23,42,0.08)]">
+        <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
           {tabs.map((tab) => {
             const active = isActive(tab);
             const Icon = tab.icon;
@@ -65,7 +65,7 @@ export default function BottomNav() {
               >
                 <div className={cn(
                   'w-10 h-6 flex items-center justify-center rounded-full transition-all',
-                  active ? 'bg-veg/10' : ''
+                  active ? 'bg-veg/12 shadow-sm ring-1 ring-veg/15' : ''
                 )}>
                   <Icon
                     className={cn('w-5 h-5 transition-all', active ? 'text-veg' : 'text-gray-400')}

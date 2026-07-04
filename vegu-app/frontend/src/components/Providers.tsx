@@ -88,7 +88,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       const tag = target.tagName;
       const isField = tag === 'INPUT' || tag === 'TEXTAREA' || target.getAttribute('contenteditable') === 'true';
       if (!isField) return;
-      setTimeout(() => target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 120);
+      setTimeout(() => target.scrollIntoView({ block: 'nearest', behavior: 'auto' }), 80);
     };
 
     vv?.addEventListener('resize', syncKeyboardState);
