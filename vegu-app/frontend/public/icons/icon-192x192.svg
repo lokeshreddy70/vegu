@@ -1,5 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="100" fill="#16a34a"/>
-  <text x="256" y="310" font-family="Arial Black, Arial" font-weight="900" font-size="220" fill="white" text-anchor="middle">V</text>
-  <text x="256" y="420" font-family="Arial, sans-serif" font-weight="700" font-size="72" fill="#bbf7d0" text-anchor="middle">VEGU</text>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#166534"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ecfccb"/>
+      <stop offset="100%" stop-color="#bbf7d0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="156" fill="rgba(255,255,255,0.12)"/>
+  <path d="M264 120c66 8 110 53 114 118 5 80-48 148-144 170-7 2-12 8-13 15l-5 29c-2 11-17 14-22 4l-10-23c-4-9-2-20 5-27l14-14c5-5 8-11 10-18 11-67 47-113 107-139-49 5-90 27-123 67-9 11-26 0-20-13 25-56 71-104 148-129 11-4 22 3 23 15z" fill="url(#leaf)"/>
+  <path d="M199 333c34-30 74-52 121-66" stroke="#14532d" stroke-width="18" stroke-linecap="round" fill="none"/>
+  <text x="256" y="456" font-family="Arial, sans-serif" font-weight="700" font-size="64" fill="#ecfdf5" text-anchor="middle" letter-spacing="10">VEGU</text>
 </svg>

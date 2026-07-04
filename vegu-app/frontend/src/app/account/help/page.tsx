@@ -53,6 +53,7 @@ export default function HelpPage() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [composerFocused, setComposerFocused] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -91,9 +92,10 @@ export default function HelpPage() {
   };
 
   return (
-    <div className="flex h-[100dvh] min-h-[100dvh] flex-col bg-app-bg">
+    <div className="flex h-[100dvh] min-h-[100dvh] flex-col bg-[#111315]">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 pt-12 pb-4 bg-app-card border-b border-app-border shrink-0">
+      <div className="shrink-0 border-b border-[#2D2416] bg-[radial-gradient(circle_at_top,#2d2416_0%,#181818_45%,#121212_100%)] px-4 pb-4 pt-12">
+        <div className="flex items-center gap-3">
         <button type="button" aria-label="Go back" onClick={() => router.back()} className="w-9 h-9 bg-zinc-800 rounded-xl flex items-center justify-center">
           <ArrowLeft className="w-4 h-4 text-zinc-300" />
         </button>
@@ -114,10 +116,15 @@ export default function HelpPage() {
         <button type="button" aria-label="Reset chat" onClick={handleReset} className="w-9 h-9 bg-zinc-800 rounded-xl flex items-center justify-center">
           <RotateCcw className="w-4 h-4 text-zinc-400" />
         </button>
+        </div>
+
+        <div className="mt-4 rounded-[24px] border border-[#3a3223] bg-white/[0.03] px-4 py-3 text-[12px] text-zinc-300">
+          Fast help for orders, refunds, cancellations, and delivery updates.
+        </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4 pb-28 space-y-4">
         {messages.map((msg, i) => (
           <div key={i} className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
             {/* Avatar */}
@@ -167,7 +174,7 @@ export default function HelpPage() {
       </div>
 
       {/* Quick questions */}
-      {messages.length <= 2 && !loading && (
+      {messages.length <= 2 && !loading && !composerFocused && !input.trim() && (
         <div className="px-4 pb-3 shrink-0">
           <p className="text-zinc-600 text-[10px] font-semibold uppercase tracking-wide mb-2">Quick questions</p>
           <div className="flex gap-2 flex-wrap">
@@ -186,12 +193,14 @@ export default function HelpPage() {
       )}
 
       {/* Input bar */}
-      <div className="px-4 pb-8 pt-3 bg-app-card border-t border-app-border shrink-0">
-        <div className="flex items-center gap-2">
+      <div className="shrink-0 border-t border-[#2D2416] bg-[#171717]/95 px-4 pb-[calc(env(safe-area-inset-bottom)+14px)] pt-3 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-xl items-center gap-2 rounded-[28px] border border-[#3a3223] bg-[#1D1D1D] p-2 shadow-[0_-10px_30px_rgba(0,0,0,0.28)]">
           <input
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
+            onFocus={() => setComposerFocused(true)}
+            onBlur={() => setComposerFocused(false)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); } }}
             placeholder="Type your message..."
             autoComplete="on"
@@ -200,14 +209,14 @@ export default function HelpPage() {
             spellCheck
             enterKeyHint="send"
             disabled={loading}
-            className="flex-1 bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-gold/50 disabled:opacity-50"
+            className="flex-1 bg-transparent px-4 py-3 text-sm text-white placeholder:text-zinc-500 outline-none disabled:opacity-50"
           />
           <button
             type="button"
             onClick={() => sendMessage(input)}
             disabled={loading || !input.trim()}
             aria-label="Send message"
-            className="w-11 h-11 bg-gold rounded-2xl flex items-center justify-center disabled:opacity-40 shrink-0"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gold disabled:opacity-40"
           >
             <Send className="w-4 h-4 text-black" />
           </button>

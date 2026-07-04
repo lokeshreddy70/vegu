@@ -1,13 +1,16 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+const liveReloadUrl = process.env.CAP_SERVER_URL?.trim();
+const appUrl = liveReloadUrl || 'https://frontend-jet-sigma-69.vercel.app';
+
 const config: CapacitorConfig = {
   appId: 'com.vegu.app',
   appName: 'VEGU',
   webDir: '.next',
   server: {
-    // Uses deployed frontend in mobile wrapper. Switch to local dev URL if needed.
-    url: 'https://frontend-jet-sigma-69.vercel.app',
-    cleartext: false,
+    // Production APK uses the deployed frontend; CAP_SERVER_URL can override this for local native debugging.
+    url: appUrl,
+    cleartext: appUrl.startsWith('http://'),
     allowNavigation: [
       '*.vercel.app',
       'vegu-backend.vercel.app',
