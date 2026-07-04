@@ -180,7 +180,21 @@ export const getMyOrders = async (req: AuthRequest, res: Response): Promise<void
   const [orders, total] = await Promise.all([
     prisma.order.findMany({
       where: { userId: req.user!.userId },
-      include: { items: true, vendor: { select: { storeName: true } } },
+      include: {
+        items: true,
+        vendor: { select: { storeName: true } },
+        deliveryPartner: {
+          select: {
+            id: true,
+            currentLat: true,
+            currentLng: true,
+            vehicleType: true,
+            vehicleNo: true,
+            status: true,
+            user: { select: { name: true, phone: true, avatar: true } },
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
       skip,
       take: limit,
@@ -198,7 +212,15 @@ export const getOrderById = async (req: AuthRequest, res: Response): Promise<voi
       items: { include: { product: { select: { slug: true, images: true } } } },
       address: true,
       vendor: { select: { storeName: true, storeSlug: true } },
-      deliveryPartner: { include: { user: { select: { name: true, phone: true, avatar: true } } } },
+      deliveryPartner: { select: {
+        id: true,
+        currentLat: true,
+        currentLng: true,
+        vehicleType: true,
+        vehicleNo: true,
+        status: true,
+        user: { select: { name: true, phone: true, avatar: true } },
+      } },
     },
   });
   if (!order) {

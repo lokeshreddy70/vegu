@@ -9,6 +9,7 @@ import { syncAddToCart, syncUpdateCartItem } from '@/lib/cartSync';
 import { resolveApiBase } from '@/lib/apiBase';
 import { formatPrice } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import WishlistButton from '@/components/product/WishlistButton';
 
 interface BazaarProduct {
   id: string; name: string; slug: string; price: number; comparePrice?: number | null;
@@ -72,6 +73,9 @@ function BazaarCard({
             <div className="w-full h-full flex items-center justify-center text-3xl">🛒</div>
           )}
           <div className="absolute top-2 left-2">{badge}</div>
+          <div className="absolute top-2 right-2">
+            <WishlistButton productId={product.id} />
+          </div>
         </div>
         <div className="p-2.5">
           <p className="text-gray-800 text-xs font-semibold line-clamp-2 leading-snug mb-0.5">{product.name}</p>

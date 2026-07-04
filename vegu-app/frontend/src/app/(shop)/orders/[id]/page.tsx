@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, MapPin, XCircle, Leaf, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, MapPin, XCircle, Leaf, CheckCircle2, Phone, Navigation, Bike } from 'lucide-react';
 import RiderRatingCard from '@/components/orders/RiderRatingCard';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
@@ -233,6 +233,43 @@ export default function OrderDetailPage() {
             {order.address.line1}{order.address.line2 ? `, ${order.address.line2}` : ''}
           </p>
           <p className="text-gray-500 text-xs">{order.address.city}, {order.address.state} — {order.address.pincode}</p>
+        </div>
+      )}
+
+      {order.deliveryPartner && (
+        <div className="mx-4 mb-4 rounded-3xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center gap-2">
+            <Bike className="h-4 w-4 text-veg" />
+            <p className="text-sm font-bold text-gray-900">Rider Tracking</p>
+          </div>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">{order.deliveryPartner.user?.name || 'Assigned rider'}</p>
+              <p className="mt-0.5 text-xs text-gray-500">{order.deliveryPartner.vehicleType}{order.deliveryPartner.vehicleNo ? ` · ${order.deliveryPartner.vehicleNo}` : ''}</p>
+              <p className="mt-1 text-xs text-emerald-500">Status: {order.deliveryPartner.status?.replace(/_/g, ' ')}</p>
+            </div>
+            <div className="flex gap-2">
+              {order.deliveryPartner.user?.phone && (
+                <a title="Call rider" href={`tel:${order.deliveryPartner.user.phone}`} className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-veg">
+                  <Phone className="h-4 w-4" />
+                </a>
+              )}
+              {order.deliveryPartner.currentLat && order.deliveryPartner.currentLng && (
+                <a
+                  title="Open rider location"
+                  href={`https://www.google.com/maps?q=${order.deliveryPartner.currentLat},${order.deliveryPartner.currentLng}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600"
+                >
+                  <Navigation className="h-4 w-4" />
+                </a>
+              )}
+            </div>
+          </div>
+          {order.deliveryPartner.currentLat && order.deliveryPartner.currentLng && (
+            <p className="mt-3 text-xs text-gray-500">Live rider location available. Tap navigation to open tracking.</p>
+          )}
         </div>
       )}
 

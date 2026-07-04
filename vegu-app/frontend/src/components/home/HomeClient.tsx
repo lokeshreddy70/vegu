@@ -12,6 +12,7 @@ import { useCartStore } from '@/store/cart.store';
 import { syncAddToCart, syncUpdateCartItem } from '@/lib/cartSync';
 import { formatPrice } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import WishlistButton from '@/components/product/WishlistButton';
 
 interface Category { id: string; name: string; slug: string; image?: string; }
 interface Product {
@@ -84,6 +85,9 @@ function HomeProductCard({ product }: { product: Product }) {
               {product.discount}% OFF
             </span>
           )}
+          <div className="absolute top-2 right-2">
+            <WishlistButton productId={product.id} />
+          </div>
           {product.stock === 0 && (
             <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
               <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-lg">Out of Stock</span>

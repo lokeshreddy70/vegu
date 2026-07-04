@@ -7,6 +7,7 @@ import { useCartStore } from '@/store/cart.store';
 import { syncAddToCart, syncUpdateCartItem } from '@/lib/cartSync';
 import { formatPrice } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import WishlistButton from './WishlistButton';
 
 interface Product {
   id: string;
@@ -77,6 +78,9 @@ export default function ProductCard({ product }: { product: Product }) {
                 <Zap className="w-2.5 h-2.5" /> Hot
               </span>
             )}
+          </div>
+          <div className="absolute top-2 right-2">
+            <WishlistButton productId={product.id} />
           </div>
           {product.stock === 0 && (
             <div className="absolute inset-0 bg-white/70 flex items-center justify-center">

@@ -360,7 +360,12 @@ export const submitProof = async (req: AuthRequest, res: Response): Promise<void
 
 const registerSchema = z.object({
   vehicleType: z.enum(['bike', 'cycle', 'scooter', 'car']).default('bike'),
-  vehicleNo: z.string().optional(),
+  vehicleNo: z.string().min(4, 'Vehicle number is required'),
+  profilePhoto: z.string().min(20).optional(),
+  drivingLicense: z.string().min(20, 'Driving licence photo is required'),
+  aadhaarPhoto: z.string().min(20).optional(),
+  rcDocument: z.string().min(20).optional(),
+  insuranceDocument: z.string().min(20).optional(),
 });
 
 export const registerAsRider = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -397,11 +402,16 @@ export const registerAsRider = async (req: AuthRequest, res: Response): Promise<
         userId: req.user!.userId,
         vehicleType: parsed.data.vehicleType,
         vehicleNo: parsed.data.vehicleNo,
+        profilePhoto: parsed.data.profilePhoto,
+        drivingLicense: parsed.data.drivingLicense,
+        aadhaarPhoto: parsed.data.aadhaarPhoto,
+        rcDocument: parsed.data.rcDocument,
+        insuranceDocument: parsed.data.insuranceDocument,
       },
     }),
     prisma.user.update({
       where: { id: req.user!.userId },
-      data: { role: 'DELIVERY' },
+      data: { role: 'DELIVERY', ...(parsed.data.profilePhoto ? { avatar: parsed.data.profilePhoto } : {}) },
     }),
   ]);
 

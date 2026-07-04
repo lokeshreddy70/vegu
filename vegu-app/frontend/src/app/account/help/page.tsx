@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Send, Bot, User, Leaf, RotateCcw, Phone, MapPin, Receipt, Package, AlertCircle, Sparkles, Headphones } from 'lucide-react';
+import { ArrowLeft, Send, Bot, User, Leaf, RotateCcw, Phone, MapPin, Receipt, Package, Headphones } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { getPublicConfig } from '@/lib/publicConfig';
@@ -21,6 +21,18 @@ interface SupportTicket {
   status?: string;
   priority?: string;
   order?: { orderNumber?: string } | null;
+}
+
+interface RecentOrder {
+  id: string;
+  orderNumber: string;
+  status: string;
+  total: number;
+  paymentStatus: string;
+  paymentMethod: string;
+  estimatedDelivery?: string | null;
+  vendor?: { storeName?: string } | null;
+  deliveryPartner?: { user?: { name?: string; phone?: string } | null } | null;
 }
 
 interface OrderCard {
@@ -132,6 +144,10 @@ export default function HelpPage() {
   const [loading, setLoading] = useState(false);
   const [composerFocused, setComposerFocused] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const { data: recentOrders = [] } = useQuery<RecentOrder[]>({
+    queryKey: ['support-recent-orders'],
+    queryFn: () => api.get('/api/orders').then(r => r.data.data ?? []),
+  });
   const { data: myTickets = [] } = useQuery({
     queryKey: ['my-support-tickets'],
     queryFn: () => api.get('/api/support/tickets/me').then(r => r.data.data),
@@ -158,23 +174,44 @@ export default function HelpPage() {
         role: 'assistant',
         content: `Sorry, I\'m having trouble responding right now. Please email **${publicConfig?.supportEmail || 'support@vegu.app'}** or call **${publicConfig?.supportPhone || '+91-1800-8348-4357'}** for help.`,
         source: 'faq',
-        actions: QUICK_ACTIONS,
+        actions: actionPalette,
       }]);
     } finally {
       setLoading(false);
     }
   };
 
+  const latestOrderCard = [...messages].reverse().find(m => m.orderCard)?.orderCard || (recentOrders[0] ? {
+    id: recentOrders[0].id,
+    orderNumber: recentOrders[0].orderNumber,
+    status: recentOrders[0].status,
+    total: recentOrders[0].total,
+    paymentStatus: recentOrders[0].paymentStatus,
+    paymentMethod: recentOrders[0].paymentMethod,
+    riderName: recentOrders[0].deliveryPartner?.user?.name,
+    riderPhone: recentOrders[0].deliveryPartner?.user?.phone,
+    storeName: recentOrders[0].vendor?.storeName,
+    eta: recentOrders[0].estimatedDelivery,
+  } : null);
+
+  const actionPalette: SupportAction[] = [
+    { type: 'track-latest', label: 'Track Order' },
+    { type: 'refund-latest', label: 'Request Refund' },
+    { type: 'human', label: 'Talk To Human' },
+    { type: 'call', label: 'Call Support' },
+    ...(latestOrderCard?.riderPhone ? [{ type: 'contact-rider', label: 'Contact Rider' }] : []),
+    ...(latestOrderCard?.id ? [{ type: 'invoice', label: 'View Invoice', value: `/orders/${latestOrderCard.id}` }] : []),
+    ...(latestOrderCard?.id ? [{ type: 'change-address', label: 'Change Address', value: '/account/addresses' }] : []),
+  ];
+
   const addAssistantMessage = (content: string) => {
-    setMessages(prev => [...prev, { role: 'assistant', content, source: 'ai', actions: QUICK_ACTIONS }]);
+    setMessages(prev => [...prev, { role: 'assistant', content, source: 'ai', actions: actionPalette }]);
   };
 
-  const createTicket = async (title: string, summary: string, category: string, priority: string, requestedAction?: string) => {
-    const res = await api.post('/api/support/tickets', { title, summary, category, priority, requestedAction });
+  const createTicket = async (title: string, summary: string, category: string, priority: string, requestedAction?: string, orderId?: string) => {
+    const res = await api.post('/api/support/tickets', { title, summary, category, priority, requestedAction, orderId });
     return res.data.data as SupportTicket;
   };
-
-  const latestOrderCard = [...messages].reverse().find(m => m.orderCard)?.orderCard;
 
   const handleAction = async (action: SupportAction) => {
     try {
@@ -185,6 +222,28 @@ export default function HelpPage() {
       if (action.type === 'track-latest') {
         if (latestOrderCard?.id) router.push(`/orders/${latestOrderCard.id}`);
         else addAssistantMessage('I could not find a recent order to track yet. Ask me about your latest order first.');
+        return;
+      }
+      if (action.type === 'refund-latest') {
+        const ticket = await createTicket(
+          'Refund request',
+          latestOrderCard ? `Customer requested refund for order #${latestOrderCard.orderNumber}` : 'Customer requested refund support',
+          'REFUND',
+          'HIGH',
+          action.type,
+          latestOrderCard?.id,
+        );
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: latestOrderCard
+            ? `I created a refund support ticket for order #${latestOrderCard.orderNumber}. Our team can review the request and update you.`
+            : 'I created a refund support ticket. Our team can review the request and update you.',
+          source: 'ai',
+          ticket,
+          actions: actionPalette,
+          orderCard: latestOrderCard,
+        }]);
+        toast.success('Refund request created');
         return;
       }
       if (action.type === 'change-address') {
@@ -217,6 +276,7 @@ export default function HelpPage() {
         category,
         action.type === 'human' ? 'HIGH' : 'MEDIUM',
         action.type,
+        latestOrderCard?.id,
       );
 
       setMessages(prev => [...prev, {
@@ -226,7 +286,8 @@ export default function HelpPage() {
           : `${action.label} has been logged. I created a support ticket so the operations team can continue this request.`,
         source: 'ai',
         ticket,
-        actions: QUICK_ACTIONS,
+        actions: actionPalette,
+        orderCard: latestOrderCard,
       }]);
       toast.success('Support ticket created');
     } catch (error) {
@@ -240,7 +301,7 @@ export default function HelpPage() {
       role: 'assistant',
       content: "Hi! 👋 I'm Vegu Support. How can I help you today?",
       source: 'ai',
-      actions: QUICK_ACTIONS,
+      actions: actionPalette,
     }]);
   };
 
@@ -371,7 +432,7 @@ export default function HelpPage() {
             ))}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            {QUICK_ACTIONS.map((action) => (
+            {actionPalette.map((action) => (
               <button
                 key={action.type}
                 type="button"
@@ -382,6 +443,7 @@ export default function HelpPage() {
                 {action.type.includes('refund') && <Receipt className="h-3 w-3" />}
                 {action.type === 'call' && <Phone className="h-3 w-3" />}
                 {action.type === 'human' && <Headphones className="h-3 w-3" />}
+                {action.type === 'contact-rider' && <MapPin className="h-3 w-3" />}
                 {action.label}
               </button>
             ))}

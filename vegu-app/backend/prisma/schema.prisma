@@ -55,6 +55,12 @@ enum DeliveryStatus {
   OFFLINE
 }
 
+enum RiderVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum TransactionType {
   CREDIT
   DEBIT
@@ -270,6 +276,12 @@ model DeliveryPartner {
   vehicleType     String         @default("bike")
   vehicleNo       String?
   isVerified      Boolean        @default(false)
+  verificationStatus RiderVerificationStatus @default(PENDING)
+  profilePhoto    String?        @db.Text
+  drivingLicense  String?        @db.Text
+  aadhaarPhoto    String?        @db.Text
+  rcDocument      String?        @db.Text
+  insuranceDocument String?      @db.Text
   status          DeliveryStatus @default(OFFLINE)
   rating          Float          @default(0)
   ratingCount     Int            @default(0)
