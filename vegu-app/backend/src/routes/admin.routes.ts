@@ -10,6 +10,7 @@ import { getCoupons, createCoupon, updateCoupon, deleteCoupon } from '../control
 import { getAnalytics } from '../controllers/admin/analytics.controller';
 import { getInventory, updateStock } from '../controllers/admin/inventory.controller';
 import { getSettings, updateSettings, getLogs } from '../controllers/admin/settings.controller';
+import { getSupportOverview, getSupportTickets, getSupportTicketDetail, updateSupportTicket, replyToSupportTicket } from '../controllers/admin/support.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
@@ -74,5 +75,12 @@ router.get('/logs', asyncHandler(getLogs));
 
 // Notifications
 router.post('/notifications/broadcast', asyncHandler(broadcastNotification));
+
+// Support operations
+router.get('/support/overview', asyncHandler(getSupportOverview));
+router.get('/support/tickets', asyncHandler(getSupportTickets));
+router.get('/support/tickets/:id', asyncHandler(getSupportTicketDetail));
+router.patch('/support/tickets/:id', asyncHandler(updateSupportTicket));
+router.post('/support/tickets/:id/reply', asyncHandler(replyToSupportTicket));
 
 export default router;

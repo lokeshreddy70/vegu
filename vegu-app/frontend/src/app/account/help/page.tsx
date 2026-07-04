@@ -3,14 +3,47 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Send, Bot, User, Leaf, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Send, Bot, User, Leaf, RotateCcw, Phone, MapPin, Receipt, Package, AlertCircle, Sparkles, Headphones } from 'lucide-react';
+import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { getPublicConfig } from '@/lib/publicConfig';
+import { formatPrice } from '@/lib/utils';
+
+interface SupportAction {
+  type: string;
+  label: string;
+  value?: string;
+}
+
+interface SupportTicket {
+  id: string;
+  title?: string;
+  status?: string;
+  priority?: string;
+  order?: { orderNumber?: string } | null;
+}
+
+interface OrderCard {
+  id: string;
+  orderNumber: string;
+  status: string;
+  total: number;
+  paymentStatus: string;
+  paymentMethod: string;
+  riderName?: string | null;
+  riderPhone?: string | null;
+  storeName?: string | null;
+  eta?: string | null;
+}
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   source?: 'ai' | 'faq';
+  actions?: SupportAction[];
+  orderCard?: OrderCard | null;
+  ticket?: SupportTicket | null;
+  status?: 'sent' | 'resolved';
 }
 
 const QUICK_QUESTIONS = [
@@ -18,7 +51,50 @@ const QUICK_QUESTIONS = [
   'How do I cancel my order?',
   'When will I get my refund?',
   'Is there free delivery?',
+  'Talk to a human agent',
 ];
+
+const QUICK_ACTIONS: SupportAction[] = [
+  { type: 'track-latest', label: 'Track Order' },
+  { type: 'refund-latest', label: 'Request Refund' },
+  { type: 'human', label: 'Talk To Human' },
+  { type: 'call', label: 'Call Support' },
+];
+
+function OrderStatusCard({ order }: { order: OrderCard }) {
+  return (
+    <div className="mt-3 rounded-2xl border border-[#3a3223] bg-[#171717] p-3 text-left">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Latest Order</p>
+          <p className="mt-1 text-sm font-bold text-white">#{order.orderNumber}</p>
+          <p className="mt-1 text-xs text-zinc-400">{order.status.replace(/_/g, ' ')} · {formatPrice(order.total)}</p>
+          {order.storeName && <p className="mt-1 text-xs text-zinc-500">Store: {order.storeName}</p>}
+          {order.eta && <p className="mt-1 text-xs text-emerald-400">ETA: {new Date(order.eta).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}</p>}
+        </div>
+        <div className="rounded-xl bg-emerald-500/10 p-2 text-emerald-400">
+          <Package className="h-4 w-4" />
+        </div>
+      </div>
+      {(order.riderName || order.riderPhone) && (
+        <div className="mt-3 rounded-xl bg-white/[0.03] px-3 py-2 text-xs text-zinc-300">
+          Rider: <span className="font-semibold text-white">{order.riderName || 'Assigned'}</span>{order.riderPhone ? ` · ${order.riderPhone}` : ''}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TicketBadge({ ticket }: { ticket: SupportTicket }) {
+  if (!ticket?.id) return null;
+  return (
+    <div className="mt-3 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+      Ticket created: <span className="font-semibold">{ticket.title || ticket.id}</span>
+      {ticket.priority ? ` · ${ticket.priority}` : ''}
+      {ticket.status ? ` · ${ticket.status.replace(/_/g, ' ')}` : ''}
+    </div>
+  );
+}
 
 function renderMessageContent(text: string): JSX.Element[] {
   const lines = text.split('\n');
@@ -49,12 +125,17 @@ export default function HelpPage() {
       role: 'assistant',
       content: "Hi! 👋 I'm Vegu Support. How can I help you today?\n\nYou can ask me about your orders, delivery, refunds, or anything about the app!",
       source: 'ai',
+      actions: QUICK_ACTIONS,
     },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [composerFocused, setComposerFocused] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const { data: myTickets = [] } = useQuery({
+    queryKey: ['my-support-tickets'],
+    queryFn: () => api.get('/api/support/tickets/me').then(r => r.data.data),
+  });
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -62,7 +143,7 @@ export default function HelpPage() {
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
-    const userMsg: Message = { role: 'user', content: text };
+    const userMsg: Message = { role: 'user', content: text, status: 'sent' };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setLoading(true);
@@ -70,16 +151,87 @@ export default function HelpPage() {
     try {
       const history = messages.slice(-6).map(m => ({ role: m.role, content: m.content }));
       const res = await api.post('/api/support/chat', { message: text, history });
-      const { reply, source } = res.data.data;
-      setMessages(prev => [...prev, { role: 'assistant', content: reply, source }]);
+      const { reply, source, actions, orderCard, ticket } = res.data.data;
+      setMessages(prev => [...prev, { role: 'assistant', content: reply, source, actions, orderCard, ticket, status: 'resolved' }]);
     } catch {
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: `Sorry, I\'m having trouble responding right now. Please email **${publicConfig?.supportEmail || 'support@vegu.app'}** or call **${publicConfig?.supportPhone || '+91-1800-8348-4357'}** for help.`,
         source: 'faq',
+        actions: QUICK_ACTIONS,
       }]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const addAssistantMessage = (content: string) => {
+    setMessages(prev => [...prev, { role: 'assistant', content, source: 'ai', actions: QUICK_ACTIONS }]);
+  };
+
+  const createTicket = async (title: string, summary: string, category: string, priority: string, requestedAction?: string) => {
+    const res = await api.post('/api/support/tickets', { title, summary, category, priority, requestedAction });
+    return res.data.data as SupportTicket;
+  };
+
+  const latestOrderCard = [...messages].reverse().find(m => m.orderCard)?.orderCard;
+
+  const handleAction = async (action: SupportAction) => {
+    try {
+      if (action.type === 'track' || action.type === 'invoice') {
+        router.push(action.value || '/orders');
+        return;
+      }
+      if (action.type === 'track-latest') {
+        if (latestOrderCard?.id) router.push(`/orders/${latestOrderCard.id}`);
+        else addAssistantMessage('I could not find a recent order to track yet. Ask me about your latest order first.');
+        return;
+      }
+      if (action.type === 'change-address') {
+        router.push('/account/addresses');
+        return;
+      }
+      if (action.type === 'call') {
+        window.location.href = action.value || `tel:${publicConfig?.supportPhone || '+91180083484357'}`;
+        return;
+      }
+      if (action.type === 'contact-rider') {
+        if (latestOrderCard?.riderPhone) {
+          window.location.href = `tel:${latestOrderCard.riderPhone}`;
+        } else {
+          addAssistantMessage('Your rider contact is not available yet. I have created a support follow-up for this issue.');
+        }
+        return;
+      }
+      if (action.type === 'cancel') {
+        await api.patch(`/api/orders/${action.value}/cancel`);
+        addAssistantMessage('Your order cancellation request was submitted successfully.');
+        toast.success('Order cancelled');
+        return;
+      }
+
+      const category = action.type.includes('refund') ? 'REFUND' : action.type === 'human' ? 'GENERAL' : 'ORDER';
+      const ticket = await createTicket(
+        action.label,
+        latestOrderCard ? `${action.label} requested for order #${latestOrderCard.orderNumber}` : action.label,
+        category,
+        action.type === 'human' ? 'HIGH' : 'MEDIUM',
+        action.type,
+      );
+
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: action.type === 'human'
+          ? 'I have created a support ticket and marked it for human review. Our team can continue from the admin support desk.'
+          : `${action.label} has been logged. I created a support ticket so the operations team can continue this request.`,
+        source: 'ai',
+        ticket,
+        actions: QUICK_ACTIONS,
+      }]);
+      toast.success('Support ticket created');
+    } catch (error) {
+      console.error(error);
+      toast.error('Could not complete that action right now');
     }
   };
 
@@ -88,6 +240,7 @@ export default function HelpPage() {
       role: 'assistant',
       content: "Hi! 👋 I'm Vegu Support. How can I help you today?",
       source: 'ai',
+      actions: QUICK_ACTIONS,
     }]);
   };
 
@@ -121,6 +274,17 @@ export default function HelpPage() {
         <div className="mt-4 rounded-[24px] border border-[#3a3223] bg-white/[0.03] px-4 py-3 text-[12px] text-zinc-300">
           Fast help for orders, refunds, cancellations, and delivery updates.
         </div>
+
+        {myTickets.length > 0 && (
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {myTickets.slice(0, 4).map((ticket: SupportTicket) => (
+              <div key={ticket.id} className="shrink-0 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-zinc-300">
+                <p className="font-semibold text-white">{ticket.title || 'Support Ticket'}</p>
+                <p className="mt-0.5 text-zinc-500">{ticket.status?.replace(/_/g, ' ') || 'Open'}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Messages */}
@@ -147,10 +311,27 @@ export default function HelpPage() {
                 }`}
               >
                 {renderMessageContent(msg.content)}
+                  {msg.orderCard && <OrderStatusCard order={msg.orderCard} />}
+                  {msg.ticket && <TicketBadge ticket={msg.ticket} />}
+                  {msg.actions && msg.actions.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {msg.actions.map((action, idx) => (
+                        <button
+                          key={`${action.type}-${idx}`}
+                          type="button"
+                          onClick={() => handleAction(action)}
+                          className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-white/[0.08]"
+                        >
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
               </div>
               {msg.source === 'ai' && msg.role === 'assistant' && (
-                <span className="text-[9px] text-zinc-600 px-1">AI powered</span>
+                  <span className="text-[9px] text-zinc-600 px-1">AI powered</span>
               )}
+                {msg.role === 'user' && msg.status && <span className="px-1 text-[9px] text-zinc-600">{msg.status}</span>}
             </div>
           </div>
         ))}
@@ -186,6 +367,22 @@ export default function HelpPage() {
                 className="text-xs text-gold border border-gold/30 bg-gold/5 rounded-full px-3 py-1.5 font-medium hover:bg-gold/10 transition-colors"
               >
                 {q}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {QUICK_ACTIONS.map((action) => (
+              <button
+                key={action.type}
+                type="button"
+                onClick={() => handleAction(action)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-semibold text-emerald-300"
+              >
+                {action.type.includes('track') && <Package className="h-3 w-3" />}
+                {action.type.includes('refund') && <Receipt className="h-3 w-3" />}
+                {action.type === 'call' && <Phone className="h-3 w-3" />}
+                {action.type === 'human' && <Headphones className="h-3 w-3" />}
+                {action.label}
               </button>
             ))}
           </div>

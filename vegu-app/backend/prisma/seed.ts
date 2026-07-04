@@ -39,6 +39,27 @@ async function main() {
   });
   console.log('✅ Admin created:', admin.email);
 
+  const opsPassword = await bcrypt.hash('Ops@2024', 12);
+  const operationsAdmin = await prisma.user.upsert({
+    where: { email: 'ops@vegu.app' },
+    update: {
+      name: 'Store Operations',
+      password: opsPassword,
+      role: 'ADMIN',
+      isVerified: true,
+      isActive: true,
+    },
+    create: {
+      email: 'ops@vegu.app',
+      name: 'Store Operations',
+      password: opsPassword,
+      role: 'ADMIN',
+      isVerified: true,
+      isActive: true,
+    },
+  });
+  console.log('✅ Store Ops admin created:', operationsAdmin.email);
+
   // Vendor user
   const vendorPassword = await bcrypt.hash('Vendor@2024', 12);
   const vendorUser = await prisma.user.upsert({
@@ -184,6 +205,7 @@ async function main() {
   console.log('\n🎉 Seed complete!');
   console.log('─'.repeat(40));
   console.log('Admin:    lokeshreddym2005@gmail.com / Lokesh270327');
+  console.log('StoreOps: ops@vegu.app / Ops@2024');
   console.log('Vendor:   vendor@vegu.app   / Vendor@2024');
   console.log('Customer: customer@vegu.app / Customer@2024');
   console.log('─'.repeat(40));

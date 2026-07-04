@@ -25,6 +25,7 @@ const NAV = [
   { href: '/admin/vendors',       label: 'Vendors',        icon: Store },
   { href: '/admin/promotions',    label: 'Promotions',     icon: Megaphone },
   { href: '/admin/analytics',     label: 'Analytics',      icon: BarChart3 },
+  { href: '/admin/support',       label: 'Support Desk',   icon: Bell },
   { href: '/admin/notifications', label: 'Notifications',  icon: Bell },
   { href: '/admin/settings',      label: 'Settings',       icon: Settings },
   { href: '/admin/staff',         label: 'Staff & Roles',  icon: Shield },

@@ -60,6 +60,41 @@ enum TransactionType {
   DEBIT
 }
 
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_FOR_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum SupportTicketCategory {
+  ORDER
+  DELIVERY
+  PAYMENT
+  REFUND
+  ACCOUNT
+  RIDER
+  INVENTORY
+  STORE_OPERATIONS
+  GENERAL
+}
+
+enum SupportSenderRole {
+  CUSTOMER
+  RIDER
+  ADMIN
+  AI
+  SYSTEM
+}
+
 // ─── Models ────────────────────────────────────────────────────────────────
 
 model User {
@@ -86,6 +121,9 @@ model User {
   deliveryPartner DeliveryPartner?
   riderRatings    RiderRating[]
   favoriteRiders  FavoriteRider[]
+  supportTickets  SupportTicket[]       @relation("SupportRequester")
+  assignedTickets SupportTicket[]       @relation("SupportAssignee")
+  supportMessages SupportTicketMessage[]
 
   loyaltyPoints Int    @default(0)
   referralCode  String @unique @default(cuid())
@@ -276,6 +314,7 @@ model Order {
   estimatedDelivery DateTime?
   deliveredAt       DateTime?
   trackingHistory   Json[]
+  supportTickets    SupportTicket[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -426,6 +465,55 @@ model Notification {
 
   @@index([userId, isRead])
   @@map("notifications")
+}
+
+model SupportTicket {
+  id                 String                @id @default(cuid())
+  userId             String?
+  user               User?                 @relation("SupportRequester", fields: [userId], references: [id], onDelete: SetNull)
+  assignedAdminId    String?
+  assignedAdmin      User?                 @relation("SupportAssignee", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+  orderId            String?
+  order              Order?                @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  title              String
+  summary            String                @db.Text
+  category           SupportTicketCategory @default(GENERAL)
+  priority           SupportTicketPriority @default(MEDIUM)
+  status             SupportTicketStatus   @default(OPEN)
+  sourceRole         SupportSenderRole     @default(CUSTOMER)
+  sourceChannel      String                @default("app-chat")
+  requestedAction    String?
+  tags               String[]
+  metadata           Json?
+  aiSuggestedReply   String?               @db.Text
+  aiConfidence       Float?
+  lastMessagePreview String?               @db.Text
+  resolvedAt         DateTime?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  messages           SupportTicketMessage[]
+
+  @@index([userId, status])
+  @@index([orderId])
+  @@index([status, priority, createdAt])
+  @@index([assignedAdminId])
+  @@map("support_tickets")
+}
+
+model SupportTicketMessage {
+  id          String            @id @default(cuid())
+  ticketId    String
+  ticket      SupportTicket     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderId    String?
+  sender      User?             @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  senderRole  SupportSenderRole
+  body        String            @db.Text
+  attachments Json?
+  createdAt   DateTime          @default(now())
+
+  @@index([ticketId, createdAt])
+  @@index([senderId])
+  @@map("support_ticket_messages")
 }
 
 model Banner {
