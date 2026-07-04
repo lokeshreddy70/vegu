@@ -106,6 +106,10 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many auth attempts, please try again in 15 minutes.' },
+  keyGenerator: (req) => {
+    const email = typeof req.body?.email === 'string' ? req.body.email.toLowerCase().trim() : 'anonymous';
+    return `${req.ip}:${email}`;
+  },
 });
 
 // Order creation: 10 orders / 5 min — prevents order flooding

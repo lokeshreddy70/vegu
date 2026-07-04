@@ -91,13 +91,20 @@ export default function KitchenPage() {
   const speechRef = useRef<SpeechRec | null>(null);
   const inFlightKeyRef = useRef<string | null>(null);
   const memoryCacheRef = useRef<Map<string, string>>(new Map());
+  const pendingAssistantTextRef = useRef('');
+  const renderFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    bottomRef.current?.scrollIntoView({ behavior: streaming ? 'auto' : 'smooth' });
+  }, [messages, streaming]);
 
   useEffect(() => {
-    return () => { abortRef.current?.abort(); };
+    return () => {
+      abortRef.current?.abort();
+      if (renderFrameRef.current != null) {
+        cancelAnimationFrame(renderFrameRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -200,6 +207,7 @@ export default function KitchenPage() {
     abortRef.current = controller;
 
     const assistantMsg: Message = { role: 'assistant', content: '' };
+    pendingAssistantTextRef.current = '';
     setMessages([...history, assistantMsg]);
 
     try {
@@ -243,11 +251,19 @@ export default function KitchenPage() {
             if (error) throw new Error(error);
             if (t) {
               fullText += t;
-              setMessages(prev => {
-                const updated = [...prev];
-                updated[updated.length - 1] = { role: 'assistant', content: fullText };
-                return updated;
-              });
+              pendingAssistantTextRef.current = fullText;
+
+              if (renderFrameRef.current == null) {
+                renderFrameRef.current = requestAnimationFrame(() => {
+                  renderFrameRef.current = null;
+                  const snapshot = pendingAssistantTextRef.current;
+                  setMessages(prev => {
+                    const updated = [...prev];
+                    updated[updated.length - 1] = { role: 'assistant', content: snapshot };
+                    return updated;
+                  });
+                });
+              }
             }
           } catch {}
         }

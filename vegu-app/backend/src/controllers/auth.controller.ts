@@ -19,20 +19,29 @@ function refreshExpiresAt(): Date {
 
 const MAX_SESSIONS = 5;
 
+function sanitizeName(value: string): string {
+  return value.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+}
+
 const registerSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
+  name: z.string().min(2).max(80).transform(sanitizeName),
+  email: z.string().email().transform(v => v.toLowerCase().trim()),
   password: z.string().min(8),
-  phone: z.string().optional(),
+  phone: z.string().max(20).optional(),
 });
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().transform(v => v.toLowerCase().trim()),
   password: z.string().min(1),
 });
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   const body = registerSchema.parse(req.body);
+
+  if (body.name.length < 2) {
+    sendError(res, 'Invalid name', 422);
+    return;
+  }
 
   const exists = await prisma.user.findUnique({ where: { email: body.email } });
   if (exists) {
@@ -66,7 +75,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   });
 
   if (!user || !(await comparePassword(body.password, user.password))) {
-    sendError(res, 'Invalid email or password', 401);
+    sendError(res, 'Invalid credentials', 401);
     return;
   }
 
@@ -168,7 +177,7 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
 
 export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   const schema = z.object({
-    name: z.string().min(2).optional(),
+    name: z.string().min(2).max(80).transform(sanitizeName).optional(),
     phone: z.string().optional(),
     avatar: z.string().url().optional(),
   });

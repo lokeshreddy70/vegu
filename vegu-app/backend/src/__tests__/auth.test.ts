@@ -88,7 +88,7 @@ describe('POST /api/auth/login', () => {
     expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);
     // SECURITY: must not leak whether email exists or password is wrong
-    expect(res.body.message).toBe('Invalid email or password');
+    expect(res.body.message).toBe('Invalid credentials');
   });
 
   it('does not expose which field was wrong (enumeration protection)', async () => {

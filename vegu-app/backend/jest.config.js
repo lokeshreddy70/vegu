@@ -7,6 +7,6 @@ module.exports = {
   transform: { '^.+\\.tsx?$': ['ts-jest', { tsconfig: { module: 'commonjs' } }] },
   coverageDirectory: 'coverage',
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/server.ts'],
-  setupFilesAfterEach: [],
+  setupFilesAfterEnv: [],
   testTimeout: 30000,
 };
