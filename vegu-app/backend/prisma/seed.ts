@@ -18,13 +18,20 @@ async function main() {
   console.log('🌱 Seeding VEGU database...\n');
 
   // Admin user
-  const adminPassword = await bcrypt.hash('VeguAdmin@2024', 12);
+  const adminEmail = 'lokeshreddym2005@gmail.com';
+  const adminPassword = await bcrypt.hash('Lokesh270327', 12);
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@vegu.app' },
-    update: {},
+    where: { email: adminEmail },
+    update: {
+      name: 'Lokesh Admin',
+      password: adminPassword,
+      role: 'ADMIN',
+      isVerified: true,
+      isActive: true,
+    },
     create: {
-      email: 'admin@vegu.app',
-      name: 'VEGU Admin',
+      email: adminEmail,
+      name: 'Lokesh Admin',
       password: adminPassword,
       role: 'ADMIN',
       isVerified: true,
@@ -176,7 +183,7 @@ async function main() {
 
   console.log('\n🎉 Seed complete!');
   console.log('─'.repeat(40));
-  console.log('Admin:    admin@vegu.app    / VeguAdmin@2024');
+  console.log('Admin:    lokeshreddym2005@gmail.com / Lokesh270327');
   console.log('Vendor:   vendor@vegu.app   / Vendor@2024');
   console.log('Customer: customer@vegu.app / Customer@2024');
   console.log('─'.repeat(40));
