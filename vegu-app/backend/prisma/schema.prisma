@@ -207,6 +207,7 @@ model Product {
   id           String  @id @default(cuid())
   name         String
   slug         String  @unique
+  brand        String?
   description  String?
   price        Float
   comparePrice Float?
@@ -217,8 +218,12 @@ model Product {
   vendor       Vendor   @relation(fields: [vendorId], references: [id])
   sku          String?  @unique
   stock        Int      @default(0)
+  minStockAlert Int     @default(10)
   unit         String   @default("piece")
   weight       Float?
+  purchasePrice Float?
+  batchNumber  String?
+  expiryDate   DateTime?
   discount     Float    @default(0)
   rating       Float    @default(0)
   reviewCount  Int      @default(0)

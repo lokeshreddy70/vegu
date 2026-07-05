@@ -9,7 +9,7 @@ import { Search, Package, AlertTriangle, CheckCircle2, XCircle, ChevronLeft, Che
 
 type Product = {
   id: string; name: string; sku?: string; stock: number; unit: string;
-  images: string[]; isAvailable: boolean; price: number;
+  images: string[]; isAvailable: boolean; price: number; purchasePrice?: number; batchNumber?: string; expiryDate?: string; minStockAlert: number; brand?: string;
   category: { name: string }; vendor: { storeName: string };
 };
 
@@ -55,7 +55,7 @@ export default function InventoryPage() {
       <div className="grid grid-cols-3 gap-4">
         {[
           { label: 'Out of Stock', value: meta?.outOfStock ?? 0, color: 'text-red-400 bg-red-500/10', key: 'out' },
-          { label: 'Low Stock (≤10)', value: meta?.lowStock ?? 0, color: 'text-amber-400 bg-amber-500/10', key: 'low' },
+          { label: 'Low Stock Alert', value: meta?.lowStock ?? 0, color: 'text-amber-400 bg-amber-500/10', key: 'low' },
           { label: 'Healthy Stock', value: meta?.healthy ?? 0, color: 'text-emerald-400 bg-emerald-500/10', key: 'healthy' },
         ].map(s => (
           <button
@@ -88,15 +88,16 @@ export default function InventoryPage() {
               <tr className="border-b border-zinc-800">
                 <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">Product</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider hidden md:table-cell">Category</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider hidden lg:table-cell">Vendor</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider hidden lg:table-cell">Store</th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">Price</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider hidden xl:table-cell">Batch / Expiry</th>
                 <th className="text-center px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">Stock Status</th>
                 <th className="px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider text-center">Update Stock</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/60">
               {isLoading && Array.from({ length: 10 }).map((_, i) => (
-                <tr key={i}><td colSpan={6} className="px-4 py-3"><div className="h-4 bg-zinc-800 rounded animate-pulse" /></td></tr>
+                <tr key={i}><td colSpan={7} className="px-4 py-3"><div className="h-4 bg-zinc-800 rounded animate-pulse" /></td></tr>
               ))}
               {!isLoading && filtered.map(p => (
                 <tr key={p.id} className="hover:bg-zinc-800/20 transition-colors">
@@ -109,18 +110,26 @@ export default function InventoryPage() {
                       )}
                       <div className="min-w-0">
                         <p className="text-zinc-200 truncate max-w-[160px] font-medium text-xs">{p.name}</p>
-                        {p.sku && <p className="text-[10px] text-zinc-600 font-mono">{p.sku}</p>}
+                        <p className="text-[10px] text-zinc-600">{p.brand || 'Unbranded'}{p.sku ? ` · ${p.sku}` : ''}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-xs text-zinc-500 hidden md:table-cell">{p.category.name}</td>
                   <td className="px-4 py-3 text-xs text-zinc-500 hidden lg:table-cell truncate max-w-[120px]">{p.vendor.storeName}</td>
-                  <td className="px-4 py-3 text-right text-xs font-medium text-zinc-300">{formatPrice(p.price)}</td>
+                  <td className="px-4 py-3 text-right text-xs font-medium text-zinc-300">
+                    <p>{formatPrice(p.price)}</p>
+                    <p className="text-[10px] text-zinc-600">Cost {p.purchasePrice ? formatPrice(p.purchasePrice) : '—'}</p>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-zinc-500 hidden xl:table-cell">
+                    <p>{p.batchNumber || '—'}</p>
+                    <p className="text-[10px] text-zinc-600">{p.expiryDate ? new Date(p.expiryDate).toLocaleDateString('en-IN') : 'No expiry'}</p>
+                  </td>
                   <td className="px-4 py-3 text-center"><StockBadge stock={p.stock} /></td>
                   <td className="px-4 py-3 text-center">
                     {editing === p.id ? (
                       <div className="flex items-center justify-center gap-2">
                         <input
+                          title="Update stock quantity"
                           type="number"
                           min={0}
                           defaultValue={p.stock}
@@ -147,8 +156,8 @@ export default function InventoryPage() {
           <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800">
             <p className="text-xs text-zinc-500">Page {meta.page} of {meta.totalPages}</p>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 disabled:opacity-30 transition-colors"><ChevronLeft className="w-4 h-4" /></button>
-              <button type="button" onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))} disabled={page === meta.totalPages} className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 disabled:opacity-30 transition-colors"><ChevronRight className="w-4 h-4" /></button>
+              <button type="button" title="Previous page" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 disabled:opacity-30 transition-colors"><ChevronLeft className="w-4 h-4" /></button>
+              <button type="button" title="Next page" onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))} disabled={page === meta.totalPages} className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 disabled:opacity-30 transition-colors"><ChevronRight className="w-4 h-4" /></button>
             </div>
           </div>
         )}

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getDashboard, getUsersSummary, broadcastNotification } from '../controllers/admin/dashboard.controller';
 import { getUsers, getUserDetail, toggleUserStatus } from '../controllers/admin/users.controller';
 import { getVendors, updateVendorStatus } from '../controllers/admin/vendors.controller';
-import { getProducts, createProduct, updateProduct, deleteProduct, toggleProductFeatured } from '../controllers/admin/products.controller';
+import { getProducts, createProduct, updateProduct, deleteProduct, toggleProductFeatured, toggleProductAvailability } from '../controllers/admin/products.controller';
 import { getCategories, createCategory, updateCategory, deleteCategory } from '../controllers/admin/categories.controller';
 import { getOrders, getOrderDetail, updateOrderStatus } from '../controllers/admin/orders.controller';
 import { getBanners, createBanner, updateBanner, deleteBanner } from '../controllers/admin/banners.controller';
@@ -37,6 +37,7 @@ router.get('/products', asyncHandler(getProducts));
 router.post('/products', asyncHandler(createProduct));
 router.patch('/products/:id', asyncHandler(updateProduct));
 router.delete('/products/:id', asyncHandler(deleteProduct));
+router.patch('/products/:id/availability', asyncHandler(toggleProductAvailability));
 router.patch('/products/:id/featured', asyncHandler(toggleProductFeatured));
 
 // Categories

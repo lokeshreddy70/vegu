@@ -18,7 +18,7 @@ export const getInventory = async (req: Request, res: Response): Promise<void> =
       where,
       select: {
         id: true, name: true, sku: true, stock: true, unit: true,
-        images: true, isAvailable: true, price: true,
+        images: true, isAvailable: true, price: true, purchasePrice: true, batchNumber: true, expiryDate: true, minStockAlert: true, brand: true,
         category: { select: { name: true } },
         vendor: { select: { storeName: true } },
       },
@@ -36,10 +36,23 @@ export const getInventory = async (req: Request, res: Response): Promise<void> =
 };
 
 export const updateStock = async (req: Request, res: Response): Promise<void> => {
-  const { stock } = z.object({ stock: z.number().int().min(0) }).parse(req.body);
+  const { stock, purchasePrice, batchNumber, expiryDate, minStockAlert } = z.object({
+    stock: z.number().int().min(0),
+    purchasePrice: z.number().nonnegative().optional(),
+    batchNumber: z.string().max(120).optional(),
+    expiryDate: z.string().datetime().optional(),
+    minStockAlert: z.number().int().min(0).optional(),
+  }).parse(req.body);
   const product = await prisma.product.update({
     where: { id: req.params.id },
-    data: { stock, isAvailable: stock > 0 },
+    data: {
+      stock,
+      isAvailable: stock > 0,
+      purchasePrice,
+      batchNumber,
+      expiryDate: expiryDate ? new Date(expiryDate) : undefined,
+      minStockAlert,
+    },
   });
   sendSuccess(res, { stock: product.stock, isAvailable: product.isAvailable }, 'Stock updated');
 };

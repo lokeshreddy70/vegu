@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VEGU Product DB and Admin Control Upgrade Report</title>
+  <style>
+    body { font-family: Segoe UI, Arial, sans-serif; margin: 36px; color: #111827; line-height: 1.5; }
+    h1, h2 { color: #065f46; }
+    h1 { margin-bottom: 8px; }
+    h2 { margin-top: 24px; margin-bottom: 8px; }
+    p, li { font-size: 14px; }
+    code { font-family: Consolas, monospace; background: #f3f4f6; padding: 1px 4px; border-radius: 4px; }
+    .meta { color: #4b5563; margin-bottom: 18px; }
+  </style>
+</head>
+<body>
+  <h1>VEGU Complete Product Database + Admin Control Fix</h1>
+  <p class="meta">Generated: 2026-07-05</p>
+
+  <h2>Scope Executed</h2>
+  <ul>
+    <li>Android failing instrumented test fixed.</li>
+    <li>Admin product management upgraded with richer business fields and controls.</li>
+    <li>Inventory management expanded for cost, batch, expiry, and low-stock thresholds.</li>
+    <li>Indian grocery catalogue expanded with real categories/products and multi-store mapping.</li>
+    <li>Schema, backend, frontend builds validated and seed executed successfully.</li>
+  </ul>
+
+  <h2>Android Test Fix</h2>
+  <ul>
+    <li>File updated: <code>frontend/android/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java</code></li>
+    <li>Assertion updated from <code>com.getcapacitor.app</code> to <code>com.vegu.app</code>.</li>
+    <li>Validation: <code>gradlew testDebug</code> passed.</li>
+  </ul>
+
+  <h2>Product and Inventory Data Model Upgrade</h2>
+  <p>Prisma <code>Product</code> model was extended with owner-operational fields:</p>
+  <ul>
+    <li><code>brand</code></li>
+    <li><code>minStockAlert</code></li>
+    <li><code>purchasePrice</code></li>
+    <li><code>batchNumber</code></li>
+    <li><code>expiryDate</code></li>
+  </ul>
+
+  <h2>Admin Backend Controls Added</h2>
+  <ul>
+    <li>Admin product APIs now accept/store richer fields and image values (URL or data image).</li>
+    <li>Separate hide/show endpoint: <code>PATCH /api/admin/products/:id/availability</code>.</li>
+    <li>Delete endpoint now attempts hard delete and returns safe error if references exist.</li>
+    <li>Inventory endpoint now returns pricing and batch/expiry metadata.</li>
+    <li>Inventory update endpoint supports stock, purchase price, batch number, expiry date, and low-stock alert.</li>
+  </ul>
+
+  <h2>Admin Frontend Upgrades</h2>
+  <ul>
+    <li><code>/admin/products</code>: fields for brand, low-stock alert, weight, purchase price, batch, expiry, hide/show, image upload input.</li>
+    <li><code>/admin/inventory</code>: displays cost, batch, expiry, and richer stock context.</li>
+    <li>Accessibility and validation fixes applied to controls.</li>
+  </ul>
+
+  <h2>Indian Grocery Catalogue Expansion</h2>
+  <p>Seed data expanded to 14 categories and 45 products with realistic Indian quick-commerce assortment.</p>
+  <p>Category coverage includes:</p>
+  <ul>
+    <li>Fresh Vegetables, Fresh Fruits, Leafy Vegetables, Exotic Vegetables</li>
+    <li>Dairy, Rice & Atta, Oil & Ghee, Masala & Spices</li>
+    <li>Snacks, Beverages, Personal Care, Home Care, Baby Care, Pet Supplies</li>
+  </ul>
+
+  <h2>Multi-Store Support in Seed</h2>
+  <ul>
+    <li>Store 1: <code>Fresh Farms Direct</code> (Nellore baseline)</li>
+    <li>Store 2: <code>VEGU Tirupati Central</code></li>
+    <li>Products are mapped to store vendor based on seed store marker.</li>
+  </ul>
+
+  <h2>Validation Results</h2>
+  <ul>
+    <li><code>npm run db:push</code> — success</li>
+    <li><code>npm run build</code> (backend) — success</li>
+    <li><code>npm run build</code> (frontend) — success</li>
+    <li><code>npm run db:seed</code> — success (14 categories, 45 products)</li>
+    <li><code>gradlew testDebug</code> — success</li>
+  </ul>
+
+  <h2>Important Notes</h2>
+  <ul>
+    <li>Current image management supports URL/data-image input and admin replacement from product form.</li>
+    <li>A dedicated media storage service (S3/Cloudinary/Firebase Storage) is recommended as the next step for production-grade image lifecycle and optimization.</li>
+    <li>Real-time frontend updates remain based on current polling/react-query invalidation model; websocket-based push is a future enhancement.</li>
+  </ul>
+</body>
+</html>
