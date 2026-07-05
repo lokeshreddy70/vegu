@@ -49,6 +49,12 @@ enum InventoryAdjustmentType {
   MANUAL_CORRECTION
 }
 
+enum ChatSenderRole {
+  CUSTOMER
+  RIDER
+  ADMIN
+}
+
 enum OrderStatus {
   PENDING
   CONFIRMED
@@ -169,6 +175,7 @@ model User {
   createdStaff    StaffProfile[]        @relation("StaffCreatedBy")
   inventoryAdjustments InventoryAdjustment[] @relation("InventoryAdjustedBy")
   resetTokens     PasswordResetToken[]
+  orderChatMessages OrderChatMessage[]
 
   loyaltyPoints Int    @default(0)
   referralCode  String @unique @default(cuid())
@@ -391,6 +398,7 @@ model Order {
   packedByStaff     User?       @relation("OrderPackedBy", fields: [packedByStaffId], references: [id])
   trackingHistory   Json[]
   supportTickets    SupportTicket[]
+  chatMessages      OrderChatMessage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -752,4 +760,19 @@ model InventoryAdjustment {
   @@index([storeId, type, createdAt])
   @@index([productId, createdAt])
   @@map("inventory_adjustments")
+}
+
+model OrderChatMessage {
+  id         String         @id @default(cuid())
+  orderId    String
+  order      Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  senderId   String
+  sender     User           @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderRole ChatSenderRole
+  message    String         @db.Text
+  createdAt  DateTime       @default(now())
+
+  @@index([orderId, createdAt])
+  @@index([senderId, createdAt])
+  @@map("order_chat_messages")
 }

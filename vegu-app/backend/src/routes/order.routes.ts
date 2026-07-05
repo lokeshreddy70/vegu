@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
-import { placeOrder, getMyOrders, getOrderById, cancelOrder } from '../controllers/order.controller';
+import { placeOrder, getMyOrders, getOrderById, cancelOrder, getOrderChat, postOrderChat } from '../controllers/order.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
 
@@ -19,6 +19,8 @@ router.use(authenticate);
 router.post('/', orderCreateLimiter, asyncHandler(placeOrder));
 router.get('/', asyncHandler(getMyOrders));
 router.get('/:id', asyncHandler(getOrderById));
+router.get('/:id/chat', asyncHandler(getOrderChat));
+router.post('/:id/chat', asyncHandler(postOrderChat));
 router.patch('/:id/cancel', asyncHandler(cancelOrder));
 
 export default router;

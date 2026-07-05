@@ -322,6 +322,7 @@ export default function RiderDashboard() {
   const { user, hasHydrated, logout } = useRiderAuthStore();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [proofOrderId, setProofOrderId] = useState<string | null>(null);
+  const [riderChatText, setRiderChatText] = useState('');
 
   const handleLogout = async () => {
     const store = useRiderAuthStore.getState();
@@ -357,6 +358,30 @@ export default function RiderDashboard() {
       riderApi.patch(`/api/rider/orders/${orderId}/status`, { status }),
     onSuccess: (res) => { toast.success(res.data.message); qc.invalidateQueries({ queryKey: ['rider-dashboard'] }); },
     onError: () => toast.error('Failed to update status'),
+  });
+
+  const activeOrderId = data?.activeOrder?.id;
+  const activeOrderStatus = data?.activeOrder?.status;
+
+  const { data: riderChat = [] } = useQuery({
+    queryKey: ['rider-order-chat', activeOrderId],
+    queryFn: () => riderApi.get(`/api/orders/${activeOrderId}/chat`).then((r) => r.data.data),
+    enabled: !!activeOrderId,
+    refetchInterval: 5_000,
+  });
+
+  const sendRiderChat = useMutation({
+    mutationFn: (message: string) => riderApi.post(`/api/orders/${activeOrderId}/chat`, { message }),
+    onSuccess: () => {
+      setRiderChatText('');
+      qc.invalidateQueries({ queryKey: ['rider-order-chat', activeOrderId] });
+    },
+    onError: () => toast.error('Failed to send message'),
+  });
+
+  const pushLocation = useMutation({
+    mutationFn: ({ lat, lng }: { lat: number; lng: number }) =>
+      riderApi.patch('/api/rider/location', { lat, lng }),
   });
 
   const registerRider = useMutation({
@@ -404,6 +429,24 @@ export default function RiderDashboard() {
     { label: 'Network', ok: typeof navigator === 'undefined' ? true : navigator.onLine },
     { label: 'Proof Queue Empty', ok: offlineQueuedCount === 0 },
   ];
+
+  useEffect(() => {
+    if (!activeOrderId || !activeOrderStatus || !['CONFIRMED', 'OUT_FOR_DELIVERY'].includes(activeOrderStatus)) return;
+    if (!('geolocation' in navigator)) return;
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const payload = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        pushLocation.mutate(payload);
+      },
+      () => {
+        // no-op: UI health card already indicates GPS state
+      },
+      { enableHighAccuracy: true, maximumAge: 15_000, timeout: 20_000 },
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [activeOrderId, activeOrderStatus]);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
@@ -511,6 +554,37 @@ export default function RiderDashboard() {
                   <span className="text-sm text-blue-700 font-medium">Call {activeOrder.user.name}</span>
                 </a>
               )}
+
+              <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+                <p className="text-xs font-semibold text-gray-700 mb-2">Chat with customer</p>
+                <div className="max-h-28 overflow-y-auto space-y-1.5">
+                  {riderChat.length === 0 && <p className="text-[11px] text-gray-500">No chat messages yet</p>}
+                  {riderChat.map((m: { id: string; senderRole: string; message: string; sender?: { name?: string }; createdAt: string }) => (
+                    <div key={m.id} className={`text-[11px] ${m.senderRole === 'RIDER' ? 'text-right' : 'text-left'}`}>
+                      <span className="text-gray-400">{m.sender?.name || m.senderRole}</span>
+                      <div className={`mt-0.5 inline-block rounded-lg px-2 py-1 ${m.senderRole === 'RIDER' ? 'bg-green-600 text-white' : 'bg-white border border-gray-200 text-gray-700'}`}>
+                        {m.message}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    value={riderChatText}
+                    onChange={(e) => setRiderChatText(e.target.value)}
+                    placeholder="Message customer"
+                    className="flex-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => riderChatText.trim() && sendRiderChat.mutate(riderChatText.trim())}
+                    disabled={sendRiderChat.isPending || !riderChatText.trim()}
+                    className="rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                  >
+                    Send
+                  </button>
+                </div>
+              </div>
 
               {activeOrder.status === 'CONFIRMED' && (
                 <button type="button"

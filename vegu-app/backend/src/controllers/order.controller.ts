@@ -13,6 +13,10 @@ const orderSchema = z.object({
   notes: z.string().max(500).optional(),
 });
 
+const orderChatSchema = z.object({
+  message: z.string().min(1).max(1000),
+});
+
 /** Generate a cryptographically random, collision-resistant order number */
 function generateOrderNumber(): string {
   return `VGU-${randomBytes(4).toString('hex').toUpperCase()}`;
@@ -351,4 +355,83 @@ export const cancelOrder = async (req: AuthRequest, res: Response): Promise<void
   });
 
   sendSuccess(res, null, 'Order cancelled');
+};
+
+const resolveChatSenderRole = (role: string): 'CUSTOMER' | 'RIDER' | 'ADMIN' => {
+  if (role === 'DELIVERY') return 'RIDER';
+  if (role === 'ADMIN' || role === 'OWNER') return 'ADMIN';
+  return 'CUSTOMER';
+};
+
+export const getOrderChat = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.userId;
+  const role = req.user!.role;
+
+  const order = await prisma.order.findFirst({
+    where: {
+      id: req.params.id,
+      OR: [
+        { userId },
+        { deliveryPartner: { userId } },
+        ...(role === 'ADMIN' || role === 'OWNER' ? [{}] : []),
+      ],
+    },
+    select: { id: true },
+  });
+
+  if (!order) {
+    sendError(res, 'Order not found', 404);
+    return;
+  }
+
+  const messages = await prisma.orderChatMessage.findMany({
+    where: { orderId: order.id },
+    orderBy: { createdAt: 'asc' },
+    include: {
+      sender: { select: { id: true, name: true, role: true } },
+    },
+    take: 300,
+  });
+
+  sendSuccess(res, messages);
+};
+
+export const postOrderChat = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.userId;
+  const role = req.user!.role;
+  const body = orderChatSchema.parse(req.body);
+
+  const order = await prisma.order.findFirst({
+    where: {
+      id: req.params.id,
+      OR: [
+        { userId },
+        { deliveryPartner: { userId } },
+        ...(role === 'ADMIN' || role === 'OWNER' ? [{}] : []),
+      ],
+    },
+    include: {
+      user: { select: { id: true } },
+      deliveryPartner: { select: { id: true, userId: true } },
+    },
+  });
+
+  if (!order) {
+    sendError(res, 'Order not found', 404);
+    return;
+  }
+
+  const msg = await prisma.orderChatMessage.create({
+    data: {
+      orderId: order.id,
+      senderId: userId,
+      senderRole: resolveChatSenderRole(role),
+      message: body.message.trim(),
+    },
+    include: {
+      sender: { select: { id: true, name: true, role: true } },
+    },
+  });
+
+  sendSuccess(res, msg, 'Message sent', 201);
 };

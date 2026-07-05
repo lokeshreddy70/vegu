@@ -69,6 +69,7 @@ const QUICK_QUESTIONS = [
 const QUICK_ACTIONS: SupportAction[] = [
   { type: 'track-latest', label: 'Track Order' },
   { type: 'refund-latest', label: 'Request Refund' },
+  { type: 'delete-account-request', label: 'Request Account Deletion' },
   { type: 'human', label: 'Talk To Human' },
   { type: 'call', label: 'Call Support' },
 ];
@@ -197,6 +198,7 @@ export default function HelpPage() {
   const actionPalette: SupportAction[] = [
     { type: 'track-latest', label: 'Track Order' },
     { type: 'refund-latest', label: 'Request Refund' },
+    { type: 'delete-account-request', label: 'Request Account Deletion' },
     { type: 'human', label: 'Talk To Human' },
     { type: 'call', label: 'Call Support' },
     ...(latestOrderCard?.riderPhone ? [{ type: 'contact-rider', label: 'Contact Rider' }] : []),
@@ -244,6 +246,24 @@ export default function HelpPage() {
           orderCard: latestOrderCard,
         }]);
         toast.success('Refund request created');
+        return;
+      }
+      if (action.type === 'delete-account-request') {
+        const ticket = await createTicket(
+          'Account deletion request',
+          'Customer requested permanent account deletion and data removal assistance.',
+          'ACCOUNT',
+          'URGENT',
+          action.type,
+        );
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: 'Your account deletion request has been submitted to support. A human agent can verify identity and process this safely.',
+          source: 'ai',
+          ticket,
+          actions: actionPalette,
+        }]);
+        toast.success('Account deletion request submitted');
         return;
       }
       if (action.type === 'change-address') {
@@ -441,6 +461,7 @@ export default function HelpPage() {
               >
                 {action.type.includes('track') && <Package className="h-3 w-3" />}
                 {action.type.includes('refund') && <Receipt className="h-3 w-3" />}
+                {action.type.includes('delete') && <Headphones className="h-3 w-3" />}
                 {action.type === 'call' && <Phone className="h-3 w-3" />}
                 {action.type === 'human' && <Headphones className="h-3 w-3" />}
                 {action.type === 'contact-rider' && <MapPin className="h-3 w-3" />}

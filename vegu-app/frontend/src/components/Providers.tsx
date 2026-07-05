@@ -184,18 +184,32 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       const target = e.target;
       if (!isEditableField(target)) return;
       normalizeTextField(target);
+      root.classList.add('keyboard-open');
+      body.classList.add('keyboard-open');
       revealField(target);
+    };
+
+    const onFocusOut = () => {
+      window.setTimeout(() => {
+        const active = document.activeElement;
+        if (!isEditableField(active)) {
+          root.classList.remove('keyboard-open');
+          body.classList.remove('keyboard-open');
+        }
+      }, 120);
     };
 
     normalizeAllInputs();
     vv?.addEventListener('resize', syncKeyboardState);
     window.addEventListener('focusin', onFocusIn);
+    window.addEventListener('focusout', onFocusOut);
     window.addEventListener('orientationchange', syncKeyboardState);
     syncKeyboardState();
 
     return () => {
       vv?.removeEventListener('resize', syncKeyboardState);
       window.removeEventListener('focusin', onFocusIn);
+      window.removeEventListener('focusout', onFocusOut);
       window.removeEventListener('orientationchange', syncKeyboardState);
       root.classList.remove('keyboard-open');
       body.classList.remove('keyboard-open');

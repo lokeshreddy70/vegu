@@ -3,7 +3,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { Search, X, ArrowLeft } from 'lucide-react';
+import { Search, X, ArrowLeft, Mic, MicOff } from 'lucide-react';
+import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import ProductCard from '@/components/product/ProductCard';
 import BottomNav from '@/components/layout/BottomNav';
@@ -13,11 +14,81 @@ function SearchContent() {
   const router = useRouter();
   const [query, setQuery] = useState(searchParams.get('q') || '');
   const [debouncedQuery, setDebouncedQuery] = useState(query);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const [voiceListening, setVoiceListening] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query), 350);
     return () => clearTimeout(t);
   }, [query]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const supported = !!((window as Window & { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }).SpeechRecognition
+      || (window as Window & { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }).webkitSpeechRecognition);
+    setVoiceSupported(supported);
+  }, []);
+
+  const handleVoiceSearch = () => {
+    if (typeof window === 'undefined') return;
+    const Ctor = (window as Window & {
+      SpeechRecognition?: new () => {
+        lang: string;
+        interimResults: boolean;
+        maxAlternatives: number;
+        onstart: (() => void) | null;
+        onend: (() => void) | null;
+        onerror: ((event: { error: string }) => void) | null;
+        onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+        start: () => void;
+      };
+      webkitSpeechRecognition?: new () => {
+        lang: string;
+        interimResults: boolean;
+        maxAlternatives: number;
+        onstart: (() => void) | null;
+        onend: (() => void) | null;
+        onerror: ((event: { error: string }) => void) | null;
+        onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+        start: () => void;
+      };
+    }).SpeechRecognition || (window as Window & { webkitSpeechRecognition?: new () => {
+      lang: string;
+      interimResults: boolean;
+      maxAlternatives: number;
+      onstart: (() => void) | null;
+      onend: (() => void) | null;
+      onerror: ((event: { error: string }) => void) | null;
+      onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+      start: () => void;
+    } }).webkitSpeechRecognition;
+
+    if (!Ctor) {
+      toast.error('Voice search is not supported on this device');
+      return;
+    }
+
+    const recognition = new Ctor();
+    recognition.lang = 'en-IN';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setVoiceListening(true);
+    recognition.onend = () => setVoiceListening(false);
+    recognition.onerror = () => {
+      setVoiceListening(false);
+      toast.error('Could not capture voice input');
+    };
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim() || '';
+      if (transcript) {
+        setQuery(transcript);
+        setDebouncedQuery(transcript);
+      }
+    };
+
+    recognition.start();
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ['search', debouncedQuery],
@@ -68,6 +139,15 @@ function SearchContent() {
                 <X className="w-3 h-3 text-gray-600" />
               </button>
             )}
+            <button
+              type="button"
+              onClick={handleVoiceSearch}
+              title="Voice search"
+              disabled={!voiceSupported}
+              className="absolute right-11 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-veg/10 flex items-center justify-center disabled:opacity-40"
+            >
+              {voiceListening ? <MicOff className="w-3.5 h-3.5 text-veg" /> : <Mic className="w-3.5 h-3.5 text-veg" />}
+            </button>
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, MapPin, XCircle, Leaf, CheckCircle2, Phone, Navigation, Bike } from 'lucide-react';
@@ -43,6 +43,7 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const { isAuthenticated, hasHydrated } = useAuthStore();
+  const [chatText, setChatText] = useState('');
 
   useEffect(() => {
     if (hasHydrated && !isAuthenticated) router.push('/login');
@@ -52,12 +53,28 @@ export default function OrderDetailPage() {
     queryKey: ['order', id],
     queryFn: () => api.get(`/api/orders/${id}?include=deliveryPartner`).then(r => r.data.data),
     enabled: hasHydrated && isAuthenticated,
-    // Poll every 30 s while order is active
+    // Poll frequently when delivery is active for near-live rider tracking
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       if (!status || ['DELIVERED', 'CANCELLED', 'REFUNDED'].includes(status)) return false;
-      return 30_000;
+      return status === 'OUT_FOR_DELIVERY' ? 5_000 : 15_000;
     },
+  });
+
+  const { data: chatMessages = [] } = useQuery({
+    queryKey: ['order-chat', id],
+    queryFn: () => api.get(`/api/orders/${id}/chat`).then((r) => r.data.data),
+    enabled: hasHydrated && isAuthenticated,
+    refetchInterval: 5_000,
+  });
+
+  const { mutate: sendChat, isPending: sendingChat } = useMutation({
+    mutationFn: (message: string) => api.post(`/api/orders/${id}/chat`, { message }),
+    onSuccess: () => {
+      setChatText('');
+      qc.invalidateQueries({ queryKey: ['order-chat', id] });
+    },
+    onError: () => toast.error('Could not send message'),
   });
 
   if (!hasHydrated) return null;
@@ -270,6 +287,43 @@ export default function OrderDetailPage() {
           {order.deliveryPartner.currentLat && order.deliveryPartner.currentLng && (
             <p className="mt-3 text-xs text-gray-500">Live rider location available. Tap navigation to open tracking.</p>
           )}
+          {!order.deliveryPartner.user?.phone && (
+            <p className="mt-2 text-xs text-amber-600">Rider contact is being assigned. Please use chat below for updates.</p>
+          )}
+        </div>
+      )}
+
+      {/* Customer <-> Rider chat */}
+      {order.deliveryPartner && ['CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY'].includes(order.status) && (
+        <div className="mx-4 mb-4 rounded-3xl border border-gray-100 bg-white p-4 shadow-sm">
+          <p className="text-sm font-bold text-gray-900 mb-3">Chat with Rider</p>
+          <div className="max-h-44 overflow-y-auto rounded-2xl bg-gray-50 p-3 space-y-2">
+            {chatMessages.length === 0 && <p className="text-xs text-gray-500">No messages yet. Ask rider for delivery updates.</p>}
+            {chatMessages.map((msg: { id: string; senderRole: string; message: string; sender?: { name?: string }; createdAt: string }) => (
+              <div key={msg.id} className={`text-xs ${msg.senderRole === 'CUSTOMER' ? 'text-right' : 'text-left'}`}>
+                <p className="text-[10px] text-gray-400">{msg.sender?.name || msg.senderRole} · {new Date(msg.createdAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}</p>
+                <div className={`inline-block mt-1 rounded-xl px-2.5 py-1.5 ${msg.senderRole === 'CUSTOMER' ? 'bg-veg text-white' : 'bg-white border border-gray-200 text-gray-700'}`}>
+                  {msg.message}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex gap-2">
+            <input
+              value={chatText}
+              onChange={(e) => setChatText(e.target.value)}
+              placeholder="Type message to rider"
+              className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-veg/20"
+            />
+            <button
+              type="button"
+              onClick={() => chatText.trim() && sendChat(chatText.trim())}
+              disabled={sendingChat || !chatText.trim()}
+              className="rounded-xl bg-veg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              Send
+            </button>
+          </div>
         </div>
       )}
 
