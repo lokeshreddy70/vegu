@@ -28,6 +28,7 @@ const registerSchema = z.object({
   email: z.string().email().transform(v => v.toLowerCase().trim()),
   password: z.string().min(8),
   phone: z.string().max(20).optional(),
+  referralCode: z.string().max(60).optional(),
 });
 
 const loginSchema = z.object({
@@ -49,10 +50,30 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
+  let referredBy: string | undefined;
+  if (body.referralCode?.trim()) {
+    const referrer = await prisma.user.findUnique({
+      where: { referralCode: body.referralCode.trim() },
+      select: { id: true },
+    });
+    if (!referrer) {
+      sendError(res, 'Invalid referral code', 400);
+      return;
+    }
+    referredBy = referrer.id;
+  }
+
   const password = await hashPassword(body.password);
+  const { referralCode, ...rest } = body;
   const user = await prisma.user.create({
-    data: { ...body, password, isVerified: true },
+    data: { ...rest, password, isVerified: true, referredBy },
     select: { id: true, email: true, name: true, role: true, phone: true, avatar: true },
+  });
+
+  await prisma.wallet.upsert({
+    where: { userId: user.id },
+    update: {},
+    create: { userId: user.id },
   });
 
   const payload = { userId: user.id, role: user.role, email: user.email };
@@ -179,7 +200,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
   const schema = z.object({
     name: z.string().min(2).max(80).transform(sanitizeName).optional(),
     phone: z.string().optional(),
-    avatar: z.string().url().optional(),
+    avatar: z.string().refine((v) => /^(https?:\/\/|data:image\/)/.test(v), 'Avatar must be URL or image data').optional(),
   });
   const body = schema.parse(req.body);
   const user = await prisma.user.update({

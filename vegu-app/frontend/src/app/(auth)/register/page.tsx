@@ -15,6 +15,7 @@ const schema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
+  referralCode: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -28,7 +29,10 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      const res = await api.post('/api/auth/register', data);
+      const res = await api.post('/api/auth/register', {
+        ...data,
+        referralCode: data.referralCode?.trim() || undefined,
+      });
       if (!res.data?.data) throw new Error('Invalid server response');
       const { user, accessToken, refreshToken } = res.data.data;
       setAuth(user, accessToken, refreshToken);
@@ -123,6 +127,19 @@ export default function RegisterPage() {
                 </button>
               </div>
               {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
+            </div>
+
+            <div>
+              <label className="text-gray-700 text-xs font-semibold mb-1.5 block">Referral Code (Optional)</label>
+              <input
+                placeholder="Enter referral code"
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="done"
+                {...register('referralCode')}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-veg focus:ring-2 focus:ring-veg/10 transition-all"
+              />
             </div>
 
             <button

@@ -9,6 +9,7 @@ const orderSchema = z.object({
   addressId: z.string().min(1),
   paymentMethod: z.enum(['COD', 'STRIPE', 'RAZORPAY', 'WALLET']).default('COD'),
   couponCode: z.string().max(30).optional(),
+  useWallet: z.boolean().optional(),
   notes: z.string().max(500).optional(),
 });
 
@@ -74,6 +75,7 @@ export const placeOrder = async (req: AuthRequest, res: Response): Promise<void>
   const deliveryFee = subtotal >= 500 ? 0 : 40;
   let discount = 0;
   let appliedCouponId: string | null = null;
+  let walletApplied = 0;
 
   // Validate coupon BEFORE transaction (read-only check)
   if (body.couponCode) {
@@ -110,6 +112,18 @@ export const placeOrder = async (req: AuthRequest, res: Response): Promise<void>
   }
 
   const total = Math.max(0, subtotal + deliveryFee - discount);
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { referredBy: true } });
+  const wallet = await prisma.wallet.findUnique({ where: { userId }, select: { id: true, balance: true } });
+
+  if (body.useWallet && wallet) {
+    const settings = await prisma.setting.findMany({ where: { key: { in: ['walletMaxUsagePercent'] } } });
+    const map = new Map(settings.map((s) => [s.key, s.value]));
+    const maxPercent = Math.min(100, Math.max(0, parseFloat(map.get('walletMaxUsagePercent') || '30')));
+    const maxWalletAllowed = total * (maxPercent / 100);
+    walletApplied = Math.min(wallet.balance, maxWalletAllowed);
+  }
+
+  const netTotal = Math.max(0, total - walletApplied);
   const vendorId = cartItems[0].product.vendorId;
   const orderNumber = generateOrderNumber();
 
@@ -143,8 +157,8 @@ export const placeOrder = async (req: AuthRequest, res: Response): Promise<void>
         paymentStatus: 'PENDING',
         subtotal,
         deliveryFee,
-        discount,
-        total,
+        discount: discount + walletApplied,
+        total: netTotal,
         couponCode: body.couponCode?.toUpperCase(),
         notes: body.notes,
         status: 'CONFIRMED',
@@ -178,6 +192,49 @@ export const placeOrder = async (req: AuthRequest, res: Response): Promise<void>
         where: { id: appliedCouponId },
         data: { usedCount: { increment: 1 } },
       });
+    }
+
+    if (walletApplied > 0 && wallet) {
+      await tx.wallet.update({
+        where: { id: wallet.id },
+        data: { balance: { decrement: walletApplied } },
+      });
+      await tx.transaction.create({
+        data: {
+          walletId: wallet.id,
+          type: 'DEBIT',
+          amount: walletApplied,
+          description: `Wallet used for order ${orderNumber}`,
+          reference: orderNumber,
+        },
+      });
+    }
+
+    const successfulOrders = await tx.order.count({
+      where: { userId, status: { in: ['CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY', 'DELIVERED'] } },
+    });
+    if (successfulOrders === 0 && user?.referredBy) {
+      const settings = await tx.setting.findMany({ where: { key: { in: ['referralEnabled', 'referralRewardAmount', 'referralMinOrderValue'] } } });
+      const sMap = new Map(settings.map((s) => [s.key, s.value]));
+      const referralEnabled = (sMap.get('referralEnabled') ?? 'true') === 'true';
+      const referralRewardAmount = parseFloat(sMap.get('referralRewardAmount') || '50');
+      const referralMinOrderValue = parseFloat(sMap.get('referralMinOrderValue') || '199');
+      if (referralEnabled && netTotal >= referralMinOrderValue && referralRewardAmount > 0) {
+        const refWallet = await tx.wallet.upsert({
+          where: { userId: user.referredBy },
+          update: { balance: { increment: referralRewardAmount } },
+          create: { userId: user.referredBy, balance: referralRewardAmount },
+        });
+        await tx.transaction.create({
+          data: {
+            walletId: refWallet.id,
+            type: 'CREDIT',
+            amount: referralRewardAmount,
+            description: `Referral reward for ${orderNumber}`,
+            reference: orderNumber,
+          },
+        });
+      }
     }
 
     // Clear cart

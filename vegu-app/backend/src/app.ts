@@ -26,6 +26,7 @@ import supportRoutes from './routes/support.routes';
 import kitchenRoutes from './routes/kitchen.routes';
 import trustedRiderRoutes from './routes/trusted-rider.routes';
 import publicRoutes from './routes/public.routes';
+import walletRoutes from './routes/wallet.routes';
 
 const app = express();
 
@@ -173,6 +174,7 @@ app.use('/api/support', supportRoutes);
 app.use('/api/kitchen', kitchenRoutes);
 app.use('/api/trusted-riders', trustedRiderRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/wallet', walletRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

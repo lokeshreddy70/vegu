@@ -11,6 +11,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { pushLocalCartToDB } from '@/lib/cartSync';
 import { formatPrice } from '@/lib/utils';
 import { useHydrated } from '@/hooks/useHydrated';
+import { getPublicConfig } from '@/lib/publicConfig';
 
 interface Address {
   id: string;
@@ -34,6 +35,7 @@ export default function CheckoutPage() {
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number; description: string } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
+  const [useWallet, setUseWallet] = useState(false);
   const hydrated = useHydrated();
   const [synced, setSynced] = useState(false);
 
@@ -50,6 +52,18 @@ export default function CheckoutPage() {
     enabled: isAuthenticated && synced,
   });
 
+  const { data: publicConfig } = useQuery({
+    queryKey: ['public-config'],
+    queryFn: getPublicConfig,
+    enabled: isAuthenticated,
+  });
+
+  const { data: walletData } = useQuery<{ balance: number; earned: number; used: number; transactions: unknown[] }>({
+    queryKey: ['wallet-me'],
+    queryFn: () => api.get('/api/wallet/me').then((r) => r.data.data),
+    enabled: isAuthenticated,
+  });
+
   useEffect(() => {
     if (addresses.length > 0 && !selectedAddress) {
       const def = addresses.find((a) => a.isDefault) || addresses[0];
@@ -60,7 +74,11 @@ export default function CheckoutPage() {
   const subtotal = useCartSubtotal();
   const deliveryFee = subtotal >= 500 ? 0 : 40;
   const discount = appliedCoupon?.discount ?? 0;
-  const total = subtotal + deliveryFee - discount;
+  const walletBalance = walletData?.balance ?? 0;
+  const walletMaxPercent = Number(publicConfig?.walletMaxUsagePercent || 30);
+  const preWalletTotal = Math.max(0, subtotal + deliveryFee - discount);
+  const walletApplied = useWallet ? Math.min(walletBalance, preWalletTotal * (walletMaxPercent / 100)) : 0;
+  const total = Math.max(0, preWalletTotal - walletApplied);
 
   const applyCoupon = async () => {
     if (!couponInput.trim()) return;
@@ -81,7 +99,7 @@ export default function CheckoutPage() {
   const removeCoupon = () => { setAppliedCoupon(null); setCouponInput(''); };
 
   const { mutate: placeOrder, isPending } = useMutation({
-    mutationFn: () => api.post('/api/orders', { addressId: selectedAddress, paymentMethod, couponCode: appliedCoupon?.code }),
+    mutationFn: () => api.post('/api/orders', { addressId: selectedAddress, paymentMethod, couponCode: appliedCoupon?.code, useWallet }),
     onSuccess: (res) => {
       clearCart();
       toast.success('Order placed!', { style: { background: '#fff', color: '#1A1A1A', border: '1px solid #E8E8E8' } });
@@ -220,6 +238,14 @@ export default function CheckoutPage() {
             ))}
           </div>
 
+          <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
+            <div>
+              <p className="text-xs font-semibold text-gray-700">Use Wallet</p>
+              <p className="text-[11px] text-gray-500">Balance: {formatPrice(walletBalance)}</p>
+            </div>
+            <input type="checkbox" checked={useWallet} onChange={(e) => setUseWallet(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-veg" />
+          </div>
+
           {/* Coupon */}
           {appliedCoupon ? (
             <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
@@ -269,6 +295,12 @@ export default function CheckoutPage() {
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Coupon</span>
                 <span className="text-veg font-semibold">−{formatPrice(discount)}</span>
+              </div>
+            )}
+            {walletApplied > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Wallet</span>
+                <span className="text-veg font-semibold">−{formatPrice(walletApplied)}</span>
               </div>
             )}
             <div className="flex justify-between items-center pt-2 border-t border-gray-100">
