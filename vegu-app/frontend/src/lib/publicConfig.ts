@@ -30,6 +30,13 @@ export type PublicConfig = {
   refundPolicy: string;
   cancellationPolicy: string;
   shippingPolicy: string;
+  maintenanceMode: boolean;
+  servicePauseUntil: string;
+  servicePauseReason: string;
+  referralEnabled: boolean;
+  referralRewardAmount: string;
+  referralMinOrderValue: string;
+  walletMaxUsagePercent: string;
 };
 
 export async function getPublicConfig(): Promise<PublicConfig> {

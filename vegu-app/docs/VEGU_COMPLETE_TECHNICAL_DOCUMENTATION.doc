@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VEGU Complete Technical and Operations Documentation</title>
+  <style>
+    body { font-family: Segoe UI, Arial, sans-serif; margin: 36px; color: #111827; line-height: 1.55; }
+    h1, h2, h3 { color: #065f46; }
+    h1 { margin-bottom: 8px; }
+    h2 { margin-top: 24px; margin-bottom: 8px; }
+    h3 { margin-top: 16px; margin-bottom: 6px; }
+    p, li { font-size: 13px; }
+    code { font-family: Consolas, monospace; background: #f3f4f6; padding: 1px 4px; border-radius: 4px; }
+    .meta { color: #4b5563; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <h1>VEGU Complete Technical and Operations Documentation</h1>
+  <p class="meta">Generated: 2026-07-05</p>
+
+  <h2>1. System Overview</h2>
+  <ul>
+    <li>Customer App (web + Android wrapper)</li>
+    <li>Rider App (web + Android wrapper)</li>
+    <li>Admin Panel (owner controls)</li>
+    <li>Operations Console (separate laptop/tablet page at <code>/ops</code>)</li>
+    <li>Backend API (Node.js + Express + Prisma)</li>
+    <li>Database (PostgreSQL via Prisma)</li>
+  </ul>
+
+  <h2>2. Technology Stack</h2>
+  <ul>
+    <li>Frontend: Next.js 14, React, TypeScript, React Query, Tailwind CSS</li>
+    <li>Android wrapper: Capacitor + Gradle</li>
+    <li>Backend: Node.js, Express, TypeScript, Prisma ORM, Zod validation</li>
+    <li>Database: PostgreSQL</li>
+    <li>Auth: JWT access/refresh token architecture in backend auth controllers</li>
+  </ul>
+
+  <h2>3. Major Changes Completed</h2>
+  <h3>3.1 Android Studio test fix</h3>
+  <ul>
+    <li>Updated package assertion in instrumented test to <code>com.vegu.app</code>.</li>
+    <li>File: <code>frontend/android/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java</code>.</li>
+  </ul>
+
+  <h3>3.2 Product + inventory model upgrade</h3>
+  <p>Product model now includes:</p>
+  <ul>
+    <li><code>brand</code></li>
+    <li><code>minStockAlert</code></li>
+    <li><code>purchasePrice</code></li>
+    <li><code>batchNumber</code></li>
+    <li><code>expiryDate</code></li>
+  </ul>
+  <p>File: <code>backend/prisma/schema.prisma</code>.</p>
+
+  <h3>3.3 Admin product controls</h3>
+  <ul>
+    <li>Add/Edit supports richer fields.</li>
+    <li>Product hide/show endpoint added: <code>PATCH /api/admin/products/:id/availability</code>.</li>
+    <li>Delete now performs hard delete with safe guard when referenced by orders/carts.</li>
+    <li>Image update path supports URL or data image payload from admin product form.</li>
+  </ul>
+
+  <h3>3.4 Inventory controls</h3>
+  <ul>
+    <li>Inventory API now returns cost, batch, expiry, low-stock threshold metadata.</li>
+    <li>Stock update supports stock + purchase price + batch + expiry + alert threshold.</li>
+  </ul>
+
+  <h3>3.5 Separate operational store management app</h3>
+  <ul>
+    <li>New dedicated operations route: <code>/ops</code>.</li>
+    <li>Designed for laptop/tablet operations usage.</li>
+    <li>Includes service pause/resume controls and quick links to all operational modules.</li>
+  </ul>
+
+  <h3>3.6 Timed service pause (15 minutes)</h3>
+  <ul>
+    <li>Admin settings now supports timed pause via API.</li>
+    <li>Endpoints:</li>
+    <li><code>POST /api/admin/settings/pause-service</code> with <code>{ minutes, reason }</code></li>
+    <li><code>POST /api/admin/settings/resume-service</code></li>
+    <li>Order placement is blocked while maintenance/timed pause is active.</li>
+  </ul>
+
+  <h3>3.7 Expanded Indian grocery catalogue</h3>
+  <ul>
+    <li>14 categories, 45 realistic products.</li>
+    <li>Two seeded stores/vendors: Nellore and Tirupati.</li>
+    <li>Store-level assignment in seed data.</li>
+  </ul>
+
+  <h2>4. File-level Change Map (where to edit manually)</h2>
+  <h3>Backend</h3>
+  <ul>
+    <li>Schema: <code>backend/prisma/schema.prisma</code></li>
+    <li>Seed data: <code>backend/prisma/seed.ts</code></li>
+    <li>Admin product APIs: <code>backend/src/controllers/admin/products.controller.ts</code></li>
+    <li>Admin inventory APIs: <code>backend/src/controllers/admin/inventory.controller.ts</code></li>
+    <li>Admin settings APIs: <code>backend/src/controllers/admin/settings.controller.ts</code></li>
+    <li>Order block during pause: <code>backend/src/controllers/order.controller.ts</code></li>
+    <li>Public config output: <code>backend/src/controllers/public.controller.ts</code></li>
+    <li>Admin routes: <code>backend/src/routes/admin.routes.ts</code></li>
+  </ul>
+
+  <h3>Frontend</h3>
+  <ul>
+    <li>Admin products UI: <code>frontend/src/app/admin/products/page.tsx</code></li>
+    <li>Admin inventory UI: <code>frontend/src/app/admin/inventory/page.tsx</code></li>
+    <li>Admin settings UI: <code>frontend/src/app/admin/settings/page.tsx</code></li>
+    <li>Ops app (separate): <code>frontend/src/app/ops/page.tsx</code></li>
+    <li>Public settings types: <code>frontend/src/lib/publicConfig.ts</code></li>
+  </ul>
+
+  <h2>5. How to change key business settings manually</h2>
+  <h3>From UI (preferred)</h3>
+  <ul>
+    <li>Open Admin: <code>/admin/settings</code></li>
+    <li>Update delivery fees, support info, maintenance mode, referral and wallet limits.</li>
+    <li>Use pause button for 15-minute operational hold.</li>
+    <li>Use Ops Console: <code>/ops</code> for quick operational controls on laptop/tablet.</li>
+  </ul>
+
+  <h3>From database</h3>
+  <ul>
+    <li>Settings table stores key-value config at <code>settings</code> (Prisma model <code>Setting</code>).</li>
+    <li>Keys include maintenance and timed pause values.</li>
+  </ul>
+
+  <h2>6. Build and run commands</h2>
+  <h3>Backend</h3>
+  <ul>
+    <li><code>cd vegu-app/backend</code></li>
+    <li><code>npm install</code></li>
+    <li><code>npm run db:push</code></li>
+    <li><code>npm run db:seed</code></li>
+    <li><code>npm run build</code></li>
+    <li><code>npm run dev</code></li>
+  </ul>
+
+  <h3>Frontend</h3>
+  <ul>
+    <li><code>cd vegu-app/frontend</code></li>
+    <li><code>npm install</code></li>
+    <li><code>npm run build</code></li>
+    <li><code>npm run dev</code></li>
+  </ul>
+
+  <h3>Android Studio</h3>
+  <ul>
+    <li>Open <code>vegu-app/frontend/android</code> in Android Studio.</li>
+    <li>Sync Gradle.</li>
+    <li>Run test: <code>./gradlew testDebug</code>.</li>
+  </ul>
+
+  <h2>7. Validation checklist completed</h2>
+  <ul>
+    <li>Backend build: pass</li>
+    <li>Frontend build: pass</li>
+    <li>Database push: pass</li>
+    <li>Seed run: pass (14 categories, 45 products)</li>
+    <li>Android test (previously failing): pass</li>
+  </ul>
+
+  <h2>8. Production notes</h2>
+  <ul>
+    <li>Current upload path supports URL/data-image payloads; production media pipeline (Cloudinary/S3/Firebase Storage + CDN transforms) is recommended next.</li>
+    <li>Timed pause currently blocks new order placement from backend order API for operational safety.</li>
+    <li>Ops console is admin protected and intended for real store operations usage on larger screens.</li>
+  </ul>
+</body>
+</html>

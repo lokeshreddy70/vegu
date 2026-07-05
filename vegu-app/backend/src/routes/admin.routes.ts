@@ -9,7 +9,7 @@ import { getBanners, createBanner, updateBanner, deleteBanner } from '../control
 import { getCoupons, createCoupon, updateCoupon, deleteCoupon } from '../controllers/admin/coupons.controller';
 import { getAnalytics } from '../controllers/admin/analytics.controller';
 import { getInventory, updateStock } from '../controllers/admin/inventory.controller';
-import { getSettings, updateSettings, getLogs } from '../controllers/admin/settings.controller';
+import { getSettings, updateSettings, getLogs, pauseService, resumeService } from '../controllers/admin/settings.controller';
 import { getSupportOverview, getSupportTickets, getSupportTicketDetail, updateSupportTicket, replyToSupportTicket } from '../controllers/admin/support.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
@@ -70,6 +70,8 @@ router.delete('/coupons/:id', asyncHandler(deleteCoupon));
 // Settings
 router.get('/settings', asyncHandler(getSettings));
 router.patch('/settings', asyncHandler(updateSettings));
+router.post('/settings/pause-service', asyncHandler(pauseService));
+router.post('/settings/resume-service', asyncHandler(resumeService));
 
 // Audit Logs
 router.get('/logs', asyncHandler(getLogs));

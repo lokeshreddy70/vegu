@@ -21,6 +21,13 @@ type PublicConfig = {
   refundPolicy: string;
   cancellationPolicy: string;
   shippingPolicy: string;
+  maintenanceMode: boolean;
+  servicePauseUntil: string;
+  servicePauseReason: string;
+  referralEnabled: boolean;
+  referralRewardAmount: string;
+  referralMinOrderValue: string;
+  walletMaxUsagePercent: string;
 };
 
 const DEFAULTS: PublicConfig = {
@@ -180,6 +187,13 @@ const DEFAULTS: PublicConfig = {
   refundPolicy: 'Refunds are issued for cancelled, missing, or quality-failed items after verification. Processing time is typically 3 to 5 business days.',
   cancellationPolicy: 'Orders can be cancelled before packing starts. Once out for delivery, cancellation may be restricted as per operational policy.',
   shippingPolicy: 'Delivery windows depend on location, slot availability, and operational load. Charges and free-delivery thresholds are displayed at checkout.',
+  maintenanceMode: false,
+  servicePauseUntil: '',
+  servicePauseReason: '',
+  referralEnabled: true,
+  referralRewardAmount: '50',
+  referralMinOrderValue: '199',
+  walletMaxUsagePercent: '30',
 };
 
 const getPublicConfig = async (): Promise<PublicConfig> => {
@@ -205,6 +219,13 @@ const getPublicConfig = async (): Promise<PublicConfig> => {
     refundPolicy: map.get('refundPolicy') ?? DEFAULTS.refundPolicy,
     cancellationPolicy: map.get('cancellationPolicy') ?? DEFAULTS.cancellationPolicy,
     shippingPolicy: map.get('shippingPolicy') ?? DEFAULTS.shippingPolicy,
+    maintenanceMode: (map.get('maintenanceMode') ?? String(DEFAULTS.maintenanceMode)) === 'true',
+    servicePauseUntil: map.get('servicePauseUntil') ?? DEFAULTS.servicePauseUntil,
+    servicePauseReason: map.get('servicePauseReason') ?? DEFAULTS.servicePauseReason,
+    referralEnabled: (map.get('referralEnabled') ?? String(DEFAULTS.referralEnabled)) === 'true',
+    referralRewardAmount: map.get('referralRewardAmount') ?? DEFAULTS.referralRewardAmount,
+    referralMinOrderValue: map.get('referralMinOrderValue') ?? DEFAULTS.referralMinOrderValue,
+    walletMaxUsagePercent: map.get('walletMaxUsagePercent') ?? DEFAULTS.walletMaxUsagePercent,
   };
 };
 

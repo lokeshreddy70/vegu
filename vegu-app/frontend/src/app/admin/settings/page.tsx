@@ -11,6 +11,8 @@ type StoreSettings = {
   storeCurrency?: string; storeTimezone?: string;
   minOrderAmount?: number; deliveryFee?: number; freeDeliveryThreshold?: number;
   taxRate?: number; maintenanceMode?: boolean;
+  servicePauseUntil?: string; servicePauseReason?: string;
+  referralEnabled?: boolean; referralRewardAmount?: number; referralMinOrderValue?: number; walletMaxUsagePercent?: number;
   supportPhone?: string; supportWhatsApp?: string; supportEmail?: string;
   officeAddress?: string; supportHours?: string; emergencySupport?: string;
   aboutTitle?: string; aboutDescription?: string;
@@ -39,6 +41,18 @@ export default function SettingsPage() {
     mutationFn: () => api.patch('/api/admin/settings', form),
     onSuccess: () => { toast.success('Settings saved'); setForm({}); qc.invalidateQueries({ queryKey: ['admin-settings'] }); },
     onError: (e: unknown) => toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to save'),
+  });
+
+  const pauseService = useMutation({
+    mutationFn: (payload: { minutes: number; reason?: string }) => api.post('/api/admin/settings/pause-service', payload),
+    onSuccess: () => { toast.success('Service paused'); qc.invalidateQueries({ queryKey: ['admin-settings'] }); },
+    onError: () => toast.error('Could not pause service'),
+  });
+
+  const resumeService = useMutation({
+    mutationFn: () => api.post('/api/admin/settings/resume-service'),
+    onSuccess: () => { toast.success('Service resumed'); qc.invalidateQueries({ queryKey: ['admin-settings'] }); },
+    onError: () => toast.error('Could not resume service'),
   });
 
   const update = (key: keyof StoreSettings, value: string | number | boolean) =>
@@ -139,6 +153,25 @@ export default function SettingsPage() {
                   className="rounded border-zinc-700 bg-zinc-800 text-emerald-500"
                 />
               </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => pauseService.mutate({ minutes: 15, reason: 'Rider operations hold' })}
+                  className="rounded-lg bg-amber-500/15 px-3 py-2 text-xs font-semibold text-amber-300"
+                >
+                  Pause Service 15 Minutes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => resumeService.mutate()}
+                  className="rounded-lg bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-300"
+                >
+                  Resume Service
+                </button>
+              </div>
+              <div className="text-[11px] text-zinc-500">
+                {merged.servicePauseUntil ? `Paused until ${new Date(merged.servicePauseUntil).toLocaleString('en-IN')}` : 'No active timed pause'}
+              </div>
             </div>
           )}
 
@@ -174,6 +207,27 @@ export default function SettingsPage() {
                 <label className="block text-xs font-medium text-zinc-400 mb-1">Tax Rate (%)</label>
                 <input type="number" step="0.01" value={merged.taxRate ?? ''} onChange={e => update('taxRate', Number(e.target.value))} className={inp} placeholder="18" />
                 <p className="text-[10px] text-zinc-600 mt-1">GST or applicable tax rate applied to orders</p>
+              </div>
+              <label className="flex items-center gap-3 p-3 bg-zinc-800/50 rounded-xl cursor-pointer">
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-zinc-300">Referral Program</p>
+                  <p className="text-[10px] text-zinc-600 mt-0.5">Enable rewards for successful referrals</p>
+                </div>
+                <input type="checkbox" checked={merged.referralEnabled ?? true} onChange={e => update('referralEnabled', e.target.checked)} className="rounded border-zinc-700 bg-zinc-800 text-emerald-500" />
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1">Referral Reward (₹)</label>
+                  <input type="number" value={merged.referralRewardAmount ?? ''} onChange={e => update('referralRewardAmount', Number(e.target.value))} className={inp} placeholder="50" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1">Min Order for Reward (₹)</label>
+                  <input type="number" value={merged.referralMinOrderValue ?? ''} onChange={e => update('referralMinOrderValue', Number(e.target.value))} className={inp} placeholder="199" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1">Max Wallet Usage (%)</label>
+                  <input type="number" value={merged.walletMaxUsagePercent ?? ''} onChange={e => update('walletMaxUsagePercent', Number(e.target.value))} className={inp} placeholder="30" />
+                </div>
               </div>
             </div>
           )}

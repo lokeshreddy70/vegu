@@ -21,6 +21,23 @@ export const placeOrder = async (req: AuthRequest, res: Response): Promise<void>
   const body = orderSchema.parse(req.body);
   const userId = req.user!.userId;
 
+  const settings = await prisma.setting.findMany({
+    where: { key: { in: ['maintenanceMode', 'servicePauseUntil', 'servicePauseReason'] } },
+  });
+  const map = new Map(settings.map((s) => [s.key, s.value]));
+  const maintenanceMode = map.get('maintenanceMode') === 'true';
+  const pauseUntil = map.get('servicePauseUntil');
+  const pauseReason = map.get('servicePauseReason');
+  const isPausedByWindow = !!pauseUntil && !Number.isNaN(new Date(pauseUntil).getTime()) && new Date(pauseUntil) > new Date();
+  if (maintenanceMode || isPausedByWindow) {
+    sendError(
+      res,
+      `Service is temporarily paused${pauseUntil ? ` until ${new Date(pauseUntil).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}` : ''}. ${pauseReason || 'Please try again shortly.'}`,
+      503,
+    );
+    return;
+  }
+
   // Read cart outside transaction (read-only, no lock needed)
   const cartItems = await prisma.cartItem.findMany({
     where: { userId },
