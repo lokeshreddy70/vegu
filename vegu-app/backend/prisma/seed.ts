@@ -51,7 +51,7 @@ async function main() {
     update: {
       name: 'Store Operations',
       password: opsPassword,
-      role: 'ADMIN',
+      role: 'OWNER',
       isVerified: true,
       isActive: true,
     },
@@ -59,12 +59,52 @@ async function main() {
       email: 'ops@vegu.app',
       name: 'Store Operations',
       password: opsPassword,
-      role: 'ADMIN',
+      role: 'OWNER',
       isVerified: true,
       isActive: true,
     },
   });
   console.log('✅ Store Ops admin created:', operationsAdmin.email);
+
+  const nelloreStore = await prisma.store.upsert({
+    where: { slug: 'nellore-store-1' },
+    update: {
+      name: 'Nellore Store 1',
+      code: 'NEL-1',
+      city: 'Nellore',
+      state: 'Andhra Pradesh',
+      managerId: operationsAdmin.id,
+      isActive: true,
+    },
+    create: {
+      name: 'Nellore Store 1',
+      slug: 'nellore-store-1',
+      code: 'NEL-1',
+      city: 'Nellore',
+      state: 'Andhra Pradesh',
+      managerId: operationsAdmin.id,
+      isActive: true,
+    },
+  });
+
+  const tirupatiStore = await prisma.store.upsert({
+    where: { slug: 'tirupati-store-1' },
+    update: {
+      name: 'Tirupati Store 1',
+      code: 'TIR-1',
+      city: 'Tirupati',
+      state: 'Andhra Pradesh',
+      isActive: true,
+    },
+    create: {
+      name: 'Tirupati Store 1',
+      slug: 'tirupati-store-1',
+      code: 'TIR-1',
+      city: 'Tirupati',
+      state: 'Andhra Pradesh',
+      isActive: true,
+    },
+  });
 
   // Vendor user
   const vendorPassword = await bcrypt.hash('Vendor@2024', 12);
@@ -82,12 +122,13 @@ async function main() {
 
   const vendor = await prisma.vendor.upsert({
     where: { userId: vendorUser.id },
-    update: {},
+    update: { storeId: nelloreStore.id },
     create: {
       userId: vendorUser.id,
       storeName: 'Fresh Farms Direct',
       storeSlug: 'fresh-farms-direct',
       description: 'Premium farm-fresh produce delivered daily',
+      storeId: nelloreStore.id,
       status: VendorStatus.APPROVED,
       isActive: true,
     },
@@ -109,12 +150,13 @@ async function main() {
 
   const vendorTwo = await prisma.vendor.upsert({
     where: { userId: vendorTwoUser.id },
-    update: {},
+    update: { storeId: tirupatiStore.id },
     create: {
       userId: vendorTwoUser.id,
       storeName: 'VEGU Tirupati Central',
       storeSlug: 'vegu-tirupati-central',
       description: 'Tirupati store for fast grocery operations',
+      storeId: tirupatiStore.id,
       status: VendorStatus.APPROVED,
       isActive: true,
     },
@@ -217,6 +259,7 @@ async function main() {
         unit: p.unit,
         categoryId: p.categoryId,
         vendorId: store === 'tirupati' ? vendorTwo.id : vendor.id,
+        storeId: store === 'tirupati' ? tirupatiStore.id : nelloreStore.id,
         isFeatured: p.isFeatured ?? false,
         isTrending: p.isTrending ?? false,
         images: p.images,
@@ -226,6 +269,7 @@ async function main() {
       create: {
         ...productData,
         vendorId: store === 'tirupati' ? vendorTwo.id : vendor.id,
+        storeId: store === 'tirupati' ? tirupatiStore.id : nelloreStore.id,
         comparePrice: p.comparePrice ?? null,
         purchasePrice: p.purchasePrice ?? null,
         minStockAlert: p.minStockAlert ?? 10,
@@ -240,6 +284,76 @@ async function main() {
     productCount++;
   }
   console.log(`✅ Products created: ${productCount}`);
+
+  const inventoryManagerPass = await bcrypt.hash('Inventory@2024', 12);
+  const inventoryManager = await prisma.user.upsert({
+    where: { email: 'inventory.nellore@vegu.app' },
+    update: {
+      role: 'INVENTORY_MANAGER',
+      password: inventoryManagerPass,
+      isVerified: true,
+      isActive: true,
+    },
+    create: {
+      email: 'inventory.nellore@vegu.app',
+      name: 'Nellore Inventory Lead',
+      password: inventoryManagerPass,
+      role: 'INVENTORY_MANAGER',
+      isVerified: true,
+      isActive: true,
+    },
+  });
+
+  const packingStaffPass = await bcrypt.hash('Packing@2024', 12);
+  const packingStaff = await prisma.user.upsert({
+    where: { email: 'packing.nellore@vegu.app' },
+    update: {
+      role: 'PACKING_STAFF',
+      password: packingStaffPass,
+      isVerified: true,
+      isActive: true,
+    },
+    create: {
+      email: 'packing.nellore@vegu.app',
+      name: 'Nellore Packing Staff',
+      password: packingStaffPass,
+      role: 'PACKING_STAFF',
+      isVerified: true,
+      isActive: true,
+    },
+  });
+
+  await prisma.staffProfile.upsert({
+    where: { userId: inventoryManager.id },
+    update: {
+      storeId: nelloreStore.id,
+      status: 'ACTIVE',
+      createdById: operationsAdmin.id,
+    },
+    create: {
+      userId: inventoryManager.id,
+      storeId: nelloreStore.id,
+      employeeCode: 'NEL-INV-001',
+      status: 'ACTIVE',
+      createdById: operationsAdmin.id,
+    },
+  });
+
+  await prisma.staffProfile.upsert({
+    where: { userId: packingStaff.id },
+    update: {
+      storeId: nelloreStore.id,
+      status: 'ACTIVE',
+      createdById: operationsAdmin.id,
+    },
+    create: {
+      userId: packingStaff.id,
+      storeId: nelloreStore.id,
+      employeeCode: 'NEL-PCK-001',
+      status: 'ACTIVE',
+      createdById: operationsAdmin.id,
+    },
+  });
 
   // Banners
   await prisma.banner.createMany({

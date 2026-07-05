@@ -15,6 +15,38 @@ enum Role {
   VENDOR
   DELIVERY
   ADMIN
+  OWNER
+  STORE_MANAGER
+  INVENTORY_MANAGER
+  PACKING_STAFF
+  SUPPORT_STAFF
+}
+
+enum StaffStatus {
+  ACTIVE
+  BLOCKED
+}
+
+enum OpsOrderStage {
+  CUSTOMER_ORDERED
+  STORE_RECEIVED
+  STORE_ACCEPTED
+  PACKING_STARTED
+  PACKED
+  BARCODE_GENERATED
+  RIDER_ASSIGNED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum InventoryAdjustmentType {
+  STOCK_IN
+  STOCK_OUT
+  WASTAGE
+  EXPIRED
+  DAMAGED
+  MANUAL_CORRECTION
 }
 
 enum OrderStatus {
@@ -130,6 +162,13 @@ model User {
   supportTickets  SupportTicket[]       @relation("SupportRequester")
   assignedTickets SupportTicket[]       @relation("SupportAssignee")
   supportMessages SupportTicketMessage[]
+  staffProfile    StaffProfile?
+  managedStore    Store?                @relation("StoreManager")
+  packedOrders    Order[]               @relation("OrderPackedBy")
+  activityLogs    ActivityLog[]         @relation("ActivityActor")
+  createdStaff    StaffProfile[]        @relation("StaffCreatedBy")
+  inventoryAdjustments InventoryAdjustment[] @relation("InventoryAdjustedBy")
+  resetTokens     PasswordResetToken[]
 
   loyaltyPoints Int    @default(0)
   referralCode  String @unique @default(cuid())
@@ -216,6 +255,9 @@ model Product {
   category     Category @relation(fields: [categoryId], references: [id])
   vendorId     String
   vendor       Vendor   @relation(fields: [vendorId], references: [id])
+  storeId      String?
+  store        Store?   @relation(fields: [storeId], references: [id])
+  supplierName String?
   sku          String?  @unique
   stock        Int      @default(0)
   minStockAlert Int     @default(10)
@@ -236,12 +278,14 @@ model Product {
   cartItems     CartItem[]
   wishlistItems WishlistItem[]
   reviews       Review[]
+  adjustments   InventoryAdjustment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([categoryId])
   @@index([vendorId])
+  @@index([storeId])
   @@index([slug])
   @@index([isAvailable, isFeatured])
   @@index([stock])
@@ -260,6 +304,13 @@ model Vendor {
   banner      String?
   phone       String?
   email       String?
+  businessName String?
+  address      String?
+  gstNumber    String?
+  paymentDetails Json?
+  suppliedProducts String[]
+  storeId      String?
+  store        Store?       @relation(fields: [storeId], references: [id])
   status      VendorStatus @default(PENDING)
   isActive    Boolean      @default(false)
   rating      Float        @default(0)
@@ -313,12 +364,15 @@ model Order {
   user              User       @relation(fields: [userId], references: [id])
   vendorId          String?
   vendor            Vendor?    @relation(fields: [vendorId], references: [id])
+  storeId           String?
+  store             Store?     @relation(fields: [storeId], references: [id])
   deliveryPartnerId String?
   deliveryPartner   DeliveryPartner? @relation(fields: [deliveryPartnerId], references: [id])
   addressId         String?
   address           Address?   @relation(fields: [addressId], references: [id])
   items             OrderItem[]
   status            OrderStatus   @default(PENDING)
+  opsStage          OpsOrderStage @default(STORE_RECEIVED)
   paymentStatus     PaymentStatus @default(PENDING)
   paymentMethod     PaymentMethod @default(COD)
   paymentId         String?
@@ -330,6 +384,11 @@ model Order {
   notes             String?
   estimatedDelivery DateTime?
   deliveredAt       DateTime?
+  packingStartedAt  DateTime?
+  packedAt          DateTime?
+  packingBarcode    String?
+  packedByStaffId   String?
+  packedByStaff     User?       @relation("OrderPackedBy", fields: [packedByStaffId], references: [id])
   trackingHistory   Json[]
   supportTickets    SupportTicket[]
 
@@ -339,7 +398,9 @@ model Order {
   @@index([userId])
   @@index([vendorId])
   @@index([status])
+  @@index([opsStage])
   @@index([orderNumber])
+  @@index([storeId])
   @@index([paymentId])
   @@index([createdAt])
   @@index([status, createdAt])
@@ -600,4 +661,95 @@ model DeliveryProof {
 
   @@index([riderId])
   @@map("delivery_proofs")
+}
+
+model Store {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  code       String   @unique
+  city       String
+  state      String
+  address    String?
+  phone      String?
+  isActive   Boolean  @default(true)
+  managerId  String?  @unique
+  manager    User?    @relation("StoreManager", fields: [managerId], references: [id], onDelete: SetNull)
+  staff      StaffProfile[]
+  products   Product[]
+  orders     Order[]
+  vendors    Vendor[]
+  adjustments InventoryAdjustment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([city])
+  @@index([isActive])
+  @@map("stores")
+}
+
+model StaffProfile {
+  id           String      @id @default(cuid())
+  userId       String      @unique
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeId      String
+  store        Store       @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  employeeCode String      @unique
+  status       StaffStatus @default(ACTIVE)
+  createdById  String?
+  createdBy    User?       @relation("StaffCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  lastLoginAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([storeId, status])
+  @@map("staff_profiles")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  actor       User?    @relation("ActivityActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  module      String
+  action      String
+  targetId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([module, createdAt])
+  @@index([actorUserId, createdAt])
+  @@map("activity_logs")
+}
+
+model InventoryAdjustment {
+  id          String                  @id @default(cuid())
+  productId   String
+  product     Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storeId     String
+  store       Store                   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  type        InventoryAdjustmentType
+  quantity    Int
+  reason      String?
+  createdById String?
+  createdBy   User?                   @relation("InventoryAdjustedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime                @default(now())
+
+  @@index([storeId, type, createdAt])
+  @@index([productId, createdAt])
+  @@map("inventory_adjustments")
 }

@@ -1,124 +1,102 @@
-# VEGU — Production Deployment Guide
+# VEGU Production Deployment Guide
 
-## Architecture
+## System Architecture
 
-```
-Browser → Vercel (Next.js frontend)
-             ↓ /api/* rewrites
-          Railway (Express backend)
-             ↓
-          Neon/Supabase (PostgreSQL)
-```
+- customer-app: `vegu-app/frontend` (customer, rider and admin experiences)
+- operations-system: `vegu-app/vegu-operations` (store/staff desktop portal)
+- backend: `vegu-app/backend` (shared API, auth, business workflows)
+- database: PostgreSQL managed by Prisma schema in `vegu-app/backend/prisma/schema.prisma`
 
----
+All clients use the same secure backend and database with role-based access controls.
 
-## 1. Database — Neon (Free Tier)
+## Deploy Targets
 
-1. Create account at https://neon.tech
-2. Create a new project → name it `vegu`
-3. Copy the connection string:
-   ```
-   postgresql://USER:PASSWORD@ep-xxx.us-east-2.aws.neon.tech/neon?sslmode=require
-   ```
-4. Set `DATABASE_URL` in your backend env
+1. Backend API: Railway / Render / Azure App Service / Vercel server
+2. Customer + Rider + Admin frontend: Vercel (Next.js)
+3. Operations web portal: Vercel/Netlify (Vite app)
+4. Database: Neon / Supabase / managed PostgreSQL
 
-**Run migrations:**
+## Required Environment Variables
+
+Backend (`vegu-app/backend/.env`):
+
+- `DATABASE_URL`
+- `JWT_ACCESS_SECRET`
+- `JWT_REFRESH_SECRET`
+- `FRONTEND_URL`
+- `OPERATIONS_URL`
+
+Customer frontend (`vegu-app/frontend/.env.production`):
+
+- `NEXT_PUBLIC_API_URL=https://<backend-domain>`
+
+Operations frontend (`vegu-app/vegu-operations/.env`):
+
+- `VITE_API_URL=https://<backend-domain>`
+
+## Build and Validation
+
+Backend:
+
 ```bash
 cd vegu-app/backend
-DATABASE_URL="<neon-url>" npx prisma db push
-DATABASE_URL="<neon-url>" npx tsx prisma/seed.ts
+npm install
+npm run db:push
+npm run db:seed
+npm run build
 ```
 
----
+Customer/Rider/Admin frontend:
 
-## 2. Backend — Railway
-
-1. Create account at https://railway.app
-2. New project → Deploy from GitHub repo
-3. Select the repo, set root directory to `vegu-app/backend`
-4. Add all environment variables from `.env.production`
-5. Railway auto-detects Node.js and runs `npm start`
-
-**Or via CLI:**
 ```bash
-npm install -g @railway/cli
-railway login
-railway init
-railway up
-```
-
-**Build command:** `npm run build`  
-**Start command:** `node dist/server.js`
-
----
-
-## 3. Frontend — Vercel
-
-1. Go to https://vercel.com → Import Git repository
-2. Set root directory to `vegu-app/frontend`
-3. Add environment variables:
-   ```
-   NEXT_PUBLIC_API_URL = https://your-railway-url.up.railway.app
-   ```
-4. Deploy
-
-**Or via CLI:**
-```bash
-npm install -g vercel
 cd vegu-app/frontend
-vercel --prod
+npm install
+npm run build
 ```
 
----
-
-## 4. CI/CD — GitHub Actions
-
-Add these secrets to your GitHub repo (Settings → Secrets):
-
-| Secret | Where to get |
-|--------|-------------|
-| `VERCEL_TOKEN` | vercel.com/account/tokens |
-| `VERCEL_ORG_ID` | .vercel/project.json after `vercel link` |
-| `VERCEL_PROJECT_ID` | .vercel/project.json after `vercel link` |
-| `RAILWAY_TOKEN` | railway.app/account/tokens |
-
----
-
-## 5. Generate Secure JWT Secrets
+Operations frontend:
 
 ```bash
-# Run this twice to get two different secrets:
-node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+cd vegu-app/vegu-operations
+npm install
+npm run build
 ```
 
----
+## Admin Bootstrap Flow
 
-## 6. Post-Deployment Checklist
+1. Login as admin in admin panel.
+2. Create stores via admin API (`/api/admin/stores`).
+3. Create staff accounts via admin API (`/api/admin/staff`).
+4. Assign store and role to each staff member.
+5. Staff sign in using operations portal (`/api/operations/auth/login`).
 
-- [ ] `DATABASE_URL` points to production Neon DB
-- [ ] `FRONTEND_URL` in backend env matches Vercel URL
-- [ ] `NEXT_PUBLIC_API_URL` in frontend env matches Railway URL  
-- [ ] JWT secrets are 48+ chars and unique
-- [ ] Prisma migrations ran: `npx prisma db push`
-- [ ] Seed data loaded: `npx tsx prisma/seed.ts`
-- [ ] Health check responds: `GET /health`
-- [ ] Login works: POST `/api/auth/login`
-- [ ] CORS allows Vercel domain
+## Security Controls
 
----
+- JWT access + refresh token architecture
+- Dedicated operations auth endpoints
+- Role checks on operations and admin routes
+- Store-scoped queries for non-global staff
+- Password reset tokens with hashing and expiry
+- Activity log records for operations stage transitions
 
-## 7. Demo Accounts (after seed)
+## Multi-Store Design
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@vegu.app | VeguAdmin@2024 |
-| Vendor | vendor@vegu.app | Vendor@2024 |
-| Customer | customer@vegu.app | Customer@2024 |
+Store isolation is handled using `storeId` on products, orders, vendors, and staff profiles.
 
----
+- Admin/Owner: global visibility
+- Store Manager / Inventory / Packing / Support: scoped visibility by assigned store
 
-## 8. Monitoring
+## Operational Order Flow
 
-- Backend logs: Railway dashboard → Deployments → Logs
-- Frontend errors: Vercel dashboard → Functions → Logs
-- Database: Neon dashboard → Monitoring
+`CUSTOMER_ORDERED -> STORE_RECEIVED -> STORE_ACCEPTED -> PACKING_STARTED -> PACKED -> BARCODE_GENERATED -> RIDER_ASSIGNED -> OUT_FOR_DELIVERY -> DELIVERED`
+
+API endpoint for updates:
+
+- `PATCH /api/operations/orders/:id/stage`
+
+## Documentation Update Map
+
+- Backend architecture: `vegu-app/backend/src`
+- Prisma schema + migrations: `vegu-app/backend/prisma`
+- Customer/Rider/Admin web app: `vegu-app/frontend/src/app`
+- Operations portal: `vegu-app/vegu-operations/src`

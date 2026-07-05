@@ -42,7 +42,7 @@ export const placeOrder = async (req: AuthRequest, res: Response): Promise<void>
   // Read cart outside transaction (read-only, no lock needed)
   const cartItems = await prisma.cartItem.findMany({
     where: { userId },
-    include: { product: { select: { id: true, name: true, price: true, stock: true, isAvailable: true, vendorId: true, images: true } } },
+    include: { product: { select: { id: true, name: true, price: true, stock: true, isAvailable: true, vendorId: true, storeId: true, images: true } } },
   });
 
   if (cartItems.length === 0) {
@@ -125,6 +125,7 @@ export const placeOrder = async (req: AuthRequest, res: Response): Promise<void>
 
   const netTotal = Math.max(0, total - walletApplied);
   const vendorId = cartItems[0].product.vendorId;
+  const storeId = cartItems[0].product.storeId;
   const orderNumber = generateOrderNumber();
 
   // ATOMIC TRANSACTION: stock decrement + order create + coupon increment + cart clear
@@ -152,6 +153,7 @@ export const placeOrder = async (req: AuthRequest, res: Response): Promise<void>
         orderNumber,
         userId,
         vendorId,
+        storeId,
         addressId: body.addressId,
         paymentMethod: body.paymentMethod,
         paymentStatus: 'PENDING',
@@ -162,9 +164,11 @@ export const placeOrder = async (req: AuthRequest, res: Response): Promise<void>
         couponCode: body.couponCode?.toUpperCase(),
         notes: body.notes,
         status: 'CONFIRMED',
+        opsStage: 'CUSTOMER_ORDERED',
         estimatedDelivery: new Date(Date.now() + 30 * 60 * 1000),
         trackingHistory: [{
           status: 'CONFIRMED',
+          stage: 'CUSTOMER_ORDERED',
           note: 'Order confirmed',
           timestamp: new Date().toISOString(),
         }],
@@ -213,7 +217,7 @@ export const placeOrder = async (req: AuthRequest, res: Response): Promise<void>
     const successfulOrders = await tx.order.count({
       where: { userId, status: { in: ['CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY', 'DELIVERED'] } },
     });
-    if (successfulOrders === 0 && user?.referredBy) {
+    if (successfulOrders <= 1 && user?.referredBy) {
       const settings = await tx.setting.findMany({ where: { key: { in: ['referralEnabled', 'referralRewardAmount', 'referralMinOrderValue'] } } });
       const sMap = new Map(settings.map((s) => [s.key, s.value]));
       const referralEnabled = (sMap.get('referralEnabled') ?? 'true') === 'true';

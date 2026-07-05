@@ -31,6 +31,7 @@ export const config = {
   isDev: !isProd,
 
   frontendUrl: optional('FRONTEND_URL', 'http://localhost:3000'),
+  operationsUrl: optional('OPERATIONS_URL', 'http://localhost:3010'),
 
   jwt: {
     accessSecret: jwtAccessSecret,

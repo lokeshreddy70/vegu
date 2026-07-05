@@ -27,6 +27,7 @@ import kitchenRoutes from './routes/kitchen.routes';
 import trustedRiderRoutes from './routes/trusted-rider.routes';
 import publicRoutes from './routes/public.routes';
 import walletRoutes from './routes/wallet.routes';
+import operationsRoutes from './routes/operations.routes';
 
 const app = express();
 
@@ -60,11 +61,13 @@ app.use(cors({
   origin: (origin, cb) => {
     const allowed = [
       config.frontendUrl,
+      config.operationsUrl,
       'https://vegu-app.vercel.app',
       'https://vegu-repo.vercel.app',
       'https://frontend-jet-sigma-69.vercel.app',
       'http://localhost:3000',
       'http://localhost:3001',
+      'http://localhost:3010',
     ];
     const isVercelPreview = origin != null &&
       /^https:\/\/(vegu-app|vegu-repo|frontend)(-[a-z0-9-]+)?\.vercel\.app$/.test(origin);
@@ -175,6 +178,7 @@ app.use('/api/kitchen', kitchenRoutes);
 app.use('/api/trusted-riders', trustedRiderRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/operations', operationsRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

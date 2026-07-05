@@ -10,6 +10,8 @@ import { getCoupons, createCoupon, updateCoupon, deleteCoupon } from '../control
 import { getAnalytics } from '../controllers/admin/analytics.controller';
 import { getInventory, updateStock } from '../controllers/admin/inventory.controller';
 import { getSettings, updateSettings, getLogs, pauseService, resumeService } from '../controllers/admin/settings.controller';
+import { listStaff, createStaff, updateStaff, resetStaffPassword, removeStaff } from '../controllers/admin/staff.controller';
+import { listStores, createStore, updateStore } from '../controllers/admin/stores.controller';
 import { getSupportOverview, getSupportTickets, getSupportTicketDetail, updateSupportTicket, replyToSupportTicket } from '../controllers/admin/support.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
@@ -27,6 +29,18 @@ router.get('/users/summary', asyncHandler(getUsersSummary));
 router.get('/users', asyncHandler(getUsers));
 router.get('/users/:id', asyncHandler(getUserDetail));
 router.patch('/users/:id/toggle', asyncHandler(toggleUserStatus));
+
+// Staff
+router.get('/staff', asyncHandler(listStaff));
+router.post('/staff', asyncHandler(createStaff));
+router.patch('/staff/:id', asyncHandler(updateStaff));
+router.post('/staff/:id/reset-password', asyncHandler(resetStaffPassword));
+router.delete('/staff/:id', asyncHandler(removeStaff));
+
+// Stores
+router.get('/stores', asyncHandler(listStores));
+router.post('/stores', asyncHandler(createStore));
+router.patch('/stores/:id', asyncHandler(updateStore));
 
 // Vendors
 router.get('/vendors', asyncHandler(getVendors));
