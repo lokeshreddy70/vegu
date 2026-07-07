@@ -8,6 +8,7 @@ import {
   ArrowUpRight, Clock, CheckCircle2, XCircle, Package,
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import ProductImage from '@/components/product/ProductImage';
 
 const STATUS_COLOR: Record<string, string> = {
   PENDING: 'bg-amber-500/15 text-amber-400',
@@ -81,6 +82,8 @@ export default function AdminDashboard() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total Revenue" value={formatPrice(stats?.totalRevenue ?? 0)} icon={TrendingUp} color="emerald" sub="All-time delivered" />
+        <StatCard label="Gross Profit" value={formatPrice(stats?.grossProfit ?? 0)} icon={TrendingUp} color="emerald" sub="Delivered revenue - purchase cost" />
+        <StatCard label="Gross Loss" value={formatPrice(stats?.grossLoss ?? 0)} icon={AlertTriangle} color="red" sub="When purchase cost exceeds revenue" />
         <StatCard label="Today Revenue" value={formatPrice(stats?.todayRevenue ?? 0)} icon={ArrowUpRight} color="blue" sub={`${stats?.todayOrders ?? 0} orders today`} />
         <StatCard label="Total Orders" value={(stats?.totalOrders ?? 0).toLocaleString()} icon={ShoppingCart} color="violet" />
         <StatCard label="Pending Orders" value={stats?.pendingOrders ?? 0} icon={Clock} color="amber" />
@@ -168,7 +171,7 @@ export default function AdminDashboard() {
             {lowStockProducts.map((p: { id: string; name: string; stock: number; images: string[] }) => (
               <div key={p.id} className="flex items-center gap-3 px-5 py-3">
                 {p.images?.[0] ? (
-                  <img src={p.images[0]} alt={p.name} className="w-8 h-8 rounded-lg object-cover bg-zinc-800 shrink-0" />
+                  <ProductImage name={p.name} images={p.images} width={32} height={32} className="h-8 w-8 rounded-lg object-cover bg-zinc-800 shrink-0" />
                 ) : (
                   <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0"><Package className="w-4 h-4 text-zinc-600" /></div>
                 )}

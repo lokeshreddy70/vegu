@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { Star, Zap, Plus, Minus } from 'lucide-react';
 import { useCartStore } from '@/store/cart.store';
@@ -8,6 +7,7 @@ import { syncAddToCart, syncUpdateCartItem } from '@/lib/cartSync';
 import { formatPrice } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import WishlistButton from './WishlistButton';
+import ProductImage from './ProductImage';
 
 interface Product {
   id: string;
@@ -59,9 +59,11 @@ export default function ProductCard({ product }: { product: Product }) {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden active:scale-[0.98] transition-transform">
         <div className="relative aspect-square bg-gray-50">
           {product.images[0] ? (
-            <Image
-              src={product.images[0]}
-              alt={product.name}
+            <ProductImage
+              name={product.name}
+              slug={product.slug}
+              categoryName={product.category?.name}
+              images={product.images}
               fill
               className="object-cover"
               sizes="(max-width: 640px) 50vw, 25vw"

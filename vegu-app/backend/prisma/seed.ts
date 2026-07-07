@@ -1,5 +1,6 @@
 import { PrismaClient, VendorStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { resolveCanonicalProductImage } from '../src/utils/product-images';
 
 const prisma = new PrismaClient();
 
@@ -243,6 +244,8 @@ async function main() {
   let productCount = 0;
   for (const p of PRODUCTS) {
     const { store, ...productData } = p;
+    const canonicalImage = resolveCanonicalProductImage(p.slug, p.images);
+    const normalizedImages = canonicalImage ? [canonicalImage] : p.images;
     await prisma.product.upsert({
       where: { slug: p.slug },
       update: {
@@ -262,12 +265,13 @@ async function main() {
         storeId: store === 'tirupati' ? tirupatiStore.id : nelloreStore.id,
         isFeatured: p.isFeatured ?? false,
         isTrending: p.isTrending ?? false,
-        images: p.images,
+        images: normalizedImages,
         description: `Premium quality ${p.name.toLowerCase()}. Sourced fresh daily for maximum nutrition and taste.`,
         tags: [p.name.toLowerCase().split(' ')[0], 'fresh', 'premium'],
       },
       create: {
         ...productData,
+        images: normalizedImages,
         vendorId: store === 'tirupati' ? vendorTwo.id : vendor.id,
         storeId: store === 'tirupati' ? tirupatiStore.id : nelloreStore.id,
         comparePrice: p.comparePrice ?? null,

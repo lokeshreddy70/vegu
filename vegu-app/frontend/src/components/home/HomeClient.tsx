@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Bell, Search, Plus, Minus, ChevronRight, MapPin, Zap, Star, Tag, ChefHat } from 'lucide-react';
+import { Bell, Search, Plus, Minus, ChevronRight, MapPin, Zap, Tag, ChefHat } from 'lucide-react';
 import LiveBazaarSection from './LiveBazaarSection';
-import ChefKitsSection from './ChefKitsSection';
 import PriceFlowSection from './PriceFlowSection';
 import { useAuthStore } from '@/store/auth.store';
 import { useCartStore } from '@/store/cart.store';
@@ -13,6 +12,7 @@ import { syncAddToCart, syncUpdateCartItem } from '@/lib/cartSync';
 import { formatPrice } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import WishlistButton from '@/components/product/WishlistButton';
+import ProductImage from '@/components/product/ProductImage';
 
 interface Category { id: string; name: string; slug: string; image?: string; }
 interface Product {
@@ -70,9 +70,11 @@ function HomeProductCard({ product }: { product: Product }) {
         {/* Image */}
         <div className="relative aspect-square bg-gray-50">
           {product.images[0] ? (
-            <Image
-              src={product.images[0]}
-              alt={product.name}
+            <ProductImage
+              name={product.name}
+              slug={product.slug}
+              categoryName={product.category?.name}
+              images={product.images}
               fill
               className="object-cover"
               sizes="(max-width: 640px) 50vw, 33vw"
@@ -143,13 +145,30 @@ function HomeProductCard({ product }: { product: Product }) {
   );
 }
 
-export default function HomeClient({ categories, featured, trending }: {
-  categories: Category[]; featured: Product[]; trending: Product[];
+export default function HomeClient({ categories, featured, trending, recommended, recentlyAdded, deals }: {
+  categories: Category[];
+  featured: Product[];
+  trending: Product[];
+  recommended: Product[];
+  recentlyAdded: Product[];
+  deals: Product[];
 }) {
   const { user, isAuthenticated } = useAuthStore();
   const [activeHero, setActiveHero] = useState(0);
 
-  const allProducts = [...featured, ...trending.filter(p => !featured.find(f => f.id === p.id))];
+  const unique = (input: Product[]) => {
+    const seen = new Set<string>();
+    return input.filter((p) => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+  };
+
+  const offerProducts = unique([...deals, ...featured]).slice(0, 8);
+  const recommendedProducts = unique(recommended).slice(0, 8);
+  const recentProducts = unique(recentlyAdded).slice(0, 8);
+  const trendingProducts = unique(trending).slice(0, 8);
 
   const banners = [
     { gradient: 'from-[#2ECC71] to-[#27AE60]', emoji: '🥦', tag: 'FRESH DEALS', title: 'Up to 30% OFF on vegetables', sub: 'Farm fresh, delivered in 10 mins', href: '/products' },
@@ -157,18 +176,32 @@ export default function HomeClient({ categories, featured, trending }: {
     { gradient: 'from-[#8B5CF6] to-[#7C3AED]', emoji: '🥛', tag: 'DAIRY DEALS', title: 'Daily fresh dairy products', sub: 'From farm to your doorstep', href: '/products?category=dairy' },
   ];
 
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    const timer = window.setInterval(() => {
+      setActiveHero((prev) => (prev + 1) % banners.length);
+    }, 3500);
+    return () => window.clearInterval(timer);
+  }, [banners.length]);
+
   return (
-    <div className="bg-[#F7F9FA] min-h-screen">
+    <div className="bg-[#F7F9FA] min-h-screen md:max-w-6xl md:mx-auto md:px-4 md:pt-4">
 
       {/* ── Sticky Green Header ── */}
-      <div className="bg-veg sticky top-0 z-40">
-        <div className="px-4 pt-12 pb-3">
+      <div className="bg-veg sticky top-0 z-40 md:top-4 md:rounded-3xl md:shadow-lg md:shadow-veg/20">
+        <div className="px-4 pt-12 pb-3 md:pt-6 md:pb-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-white font-black text-2xl italic tracking-wide">vegú</span>
             <Link href="/notifications" aria-label="Notifications" className="relative w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
               <Bell className="w-4.5 h-4.5 text-white" />
               <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-white rounded-full" />
             </Link>
+          </div>
+          <div className="hidden md:flex items-center gap-2 mb-3 text-xs text-white/85">
+            <Link href="/" className="bg-white/15 px-2.5 py-1 rounded-lg">Home</Link>
+            <Link href="/kitchen" className="bg-white/15 px-2.5 py-1 rounded-lg">Kitchen</Link>
+            <Link href="/orders" className="bg-white/15 px-2.5 py-1 rounded-lg">Orders</Link>
+            <Link href="/account" className="bg-white/15 px-2.5 py-1 rounded-lg">Profile</Link>
           </div>
           <div className="flex items-center gap-1.5">
             <MapPin className="w-3.5 h-3.5 text-white/80 shrink-0" />
@@ -193,7 +226,7 @@ export default function HomeClient({ categories, featured, trending }: {
       {categories.length > 0 && (
         <div className="bg-white border-b border-gray-100 py-4">
           <div className="container-page">
-            <div className="flex gap-4 overflow-x-auto pb-0.5 scrollbar-hide">
+            <div className="flex gap-4 overflow-x-auto overscroll-x-contain pb-0.5 scrollbar-hide">
             {categories.slice(0, 10).map((cat) => (
               <Link key={cat.id} href={`/products?category=${cat.slug}`} className="flex flex-col items-center gap-1.5 shrink-0">
                 <div className="w-16 h-16 rounded-full bg-[#F0FBF4] border-2 border-transparent flex items-center justify-center overflow-hidden">
@@ -252,7 +285,7 @@ export default function HomeClient({ categories, featured, trending }: {
       </div>
 
       {/* ── AI Kitchen entry ── */}
-      <div className="mx-4 mt-4 mb-0">
+      <div className="container-page mt-4 mb-0">
         <Link href="/kitchen" className="flex items-center gap-4 bg-gradient-to-r from-[#2ECC71]/10 to-emerald-50 border border-[#2ECC71]/20 rounded-3xl p-4 active:scale-[0.99] transition-transform">
           <div className="w-12 h-12 bg-veg rounded-2xl flex items-center justify-center shrink-0">
             <ChefHat className="w-6 h-6 text-white" />
@@ -270,70 +303,95 @@ export default function HomeClient({ categories, featured, trending }: {
       {/* ── Live Bazaar ── */}
       <LiveBazaarSection />
 
-      {/* ── Top Picks ── */}
-      {allProducts.length > 0 && (
+      {/* ── Offers ── */}
+      {offerProducts.length > 0 && (
         <div className="pt-4 pb-2">
           <div className="container-page flex items-center justify-between mb-3">
             <div>
-              <h2 className="text-gray-900 font-bold text-base">Top Picks for You</h2>
-              <p className="text-gray-400 text-xs">Handpicked fresh products</p>
+              <h2 className="text-gray-900 font-bold text-base">Offers For You</h2>
+              <p className="text-gray-400 text-xs">Best price drops today</p>
             </div>
-            <Link href="/products" className="text-veg text-xs font-bold flex items-center gap-0.5">
+            <Link href="/products?featured=true" className="text-veg text-xs font-bold flex items-center gap-0.5">
               See all <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
           <div className="container-page responsive-grid-products">
-            {allProducts.slice(0, 6).map((product) => (
+            {offerProducts.slice(0, 6).map((product) => (
               <HomeProductCard key={product.id} product={product} />
             ))}
           </div>
         </div>
       )}
 
-      {/* ── Chef Kits ── */}
-      <ChefKitsSection />
-
-      {/* ── Promo strip ── */}
-      <div className="mx-4 my-4 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="flex items-center gap-4 px-4 py-3">
-          {[
-            { icon: '⚡', label: '10 min', sub: 'delivery' },
-            { icon: '🌿', label: 'Fresh', sub: 'produce' },
-            { icon: '🎁', label: 'Free', sub: 'above ₹500' },
-            { icon: '⭐', label: '4.8★', sub: '10K reviews' },
-          ].map((f) => (
-            <div key={f.label} className="flex flex-col items-center flex-1">
-              <span className="text-lg leading-none mb-0.5">{f.icon}</span>
-              <span className="text-gray-800 text-[10px] font-bold">{f.label}</span>
-              <span className="text-gray-400 text-[9px]">{f.sub}</span>
+      {/* ── Recommended ── */}
+      {recommendedProducts.length > 0 && (
+        <div className="pt-3 pb-2">
+          <div className="container-page flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-gray-900 font-bold text-base">Recommended Products</h2>
+              <p className="text-gray-400 text-xs">Picked from popular customer orders</p>
             </div>
-          ))}
+            <Link href="/products?sortBy=popular" className="text-veg text-xs font-bold flex items-center gap-0.5">
+              See all <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="container-page responsive-grid-products">
+            {recommendedProducts.slice(0, 6).map((product) => (
+              <HomeProductCard key={product.id} product={product} />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* ── Recently Added ── */}
+      {recentProducts.length > 0 && (
+        <div className="pt-3 pb-2">
+          <div className="container-page flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-gray-900 font-bold text-base">Recently Added</h2>
+              <p className="text-gray-400 text-xs">New arrivals from local stores</p>
+            </div>
+            <Link href="/products?sortBy=newest" className="text-veg text-xs font-bold flex items-center gap-0.5">
+              See all <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="container-page responsive-grid-products">
+            {recentProducts.slice(0, 6).map((product) => (
+              <HomeProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Price Flow ── */}
       <PriceFlowSection />
 
-      {/* ── Deals Banner ── */}
-      <div className="mx-4 mb-4">
-        <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-2xl border border-orange-200 p-4 flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-1.5 mb-1">
-              <Tag className="w-3.5 h-3.5 text-orange-500" />
-              <span className="text-orange-500 text-xs font-bold uppercase tracking-wide">Today's Deals</span>
+      {/* ── Deals ── */}
+      {deals.length > 0 && (
+        <div className="pb-2">
+          <div className="container-page flex items-center justify-between mb-3">
+            <div>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Tag className="w-3.5 h-3.5 text-orange-500" />
+                <h2 className="text-gray-900 font-bold text-base">Deals</h2>
+              </div>
+              <p className="text-gray-400 text-xs">Discounted products available right now</p>
             </div>
-            <p className="text-gray-900 font-bold text-sm">Save up to 30% on select items</p>
-            <Link href="/products?featured=true" className="inline-flex items-center gap-1 text-orange-500 text-xs font-bold mt-1.5">
-              Explore Deals <ChevronRight className="w-3 h-3" />
+            <Link href="/products?featured=true" className="text-veg text-xs font-bold flex items-center gap-0.5">
+              See all <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
-          <span className="text-5xl opacity-80">🛒</span>
+          <div className="container-page responsive-grid-products">
+            {deals.slice(0, 6).map((product) => (
+              <HomeProductCard key={product.id} product={product} />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── Trending ── */}
-      {trending.length > 0 && (
-        <div className="pb-4">
+      {trendingProducts.length > 0 && (
+        <div className="pb-8">
           <div className="container-page flex items-center justify-between mb-3">
             <div>
               <h2 className="text-gray-900 font-bold text-base">Trending Now 🔥</h2>
@@ -344,20 +402,12 @@ export default function HomeClient({ categories, featured, trending }: {
             </Link>
           </div>
           <div className="container-page responsive-grid-products">
-            {trending.slice(0, 4).map((product) => (
+            {trendingProducts.slice(0, 6).map((product) => (
               <HomeProductCard key={product.id} product={product} />
             ))}
           </div>
         </div>
       )}
-
-      {/* ── Rating strip ── */}
-      <div className="mx-4 mb-8 bg-white rounded-2xl border border-gray-100 shadow-sm py-3 flex items-center justify-center gap-2">
-        <div className="flex">
-          {[1, 2, 3, 4, 5].map(i => <Star key={i} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />)}
-        </div>
-        <span className="text-gray-500 text-xs font-medium">4.8 · 10K+ happy customers</span>
-      </div>
 
     </div>
   );

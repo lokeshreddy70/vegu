@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { useCartStore } from '@/store/cart.store';
+import ProductImage from '@/components/product/ProductImage';
 
 type WishlistItem = {
   id: string;
@@ -86,7 +87,7 @@ export default function WishlistPage() {
               <div key={item.id} className="bg-white border border-gray-100 rounded-2xl p-3 flex items-center gap-3">
                 <Link href={`/products/${p.slug}`} className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-100 shrink-0">
                   {p.images?.[0] ? (
-                    <Image src={p.images[0]} alt={p.name} fill className="object-cover" sizes="80px" />
+                    <ProductImage name={p.name} slug={p.slug} images={p.images} fill className="object-cover" sizes="80px" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-2xl">🛒</div>
                   )}

@@ -12,6 +12,7 @@ import {
   Plus, Search, Star, Eye, EyeOff, Pencil, Trash2, X, Package,
   ChevronLeft, ChevronRight, Filter,
 } from 'lucide-react';
+import ProductImage from '@/components/product/ProductImage';
 
 type Product = {
   id: string; name: string; slug: string; brand?: string; price: number; comparePrice?: number;
@@ -134,7 +135,10 @@ export default function ProductsPage() {
         : api.post('/api/admin/products', body);
     },
     onSuccess: () => { toast.success(editing ? 'Product updated' : 'Product created'); setShowForm(false); qc.invalidateQueries({ queryKey: ['admin-products'] }); },
-    onError: () => toast.error('Failed to save product'),
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to save product';
+      toast.error(msg);
+    },
   });
 
   const remove = useMutation({
@@ -214,7 +218,7 @@ export default function ProductsPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       {p.images[0] ? (
-                        <img src={p.images[0]} alt={p.name} className="w-9 h-9 rounded-lg object-cover bg-zinc-800 shrink-0" />
+                        <ProductImage name={p.name} slug={p.slug} categoryName={p.category.name} images={p.images} width={36} height={36} className="h-9 w-9 rounded-lg object-cover bg-zinc-800 shrink-0" />
                       ) : (
                         <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0"><Package className="w-4 h-4 text-zinc-600" /></div>
                       )}

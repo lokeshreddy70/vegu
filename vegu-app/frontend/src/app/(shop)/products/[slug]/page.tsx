@@ -8,9 +8,10 @@ import { ArrowLeft, Heart, Share2, Minus, Plus, Star, Truck, Shield, RotateCcw, 
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { useCartStore } from '@/store/cart.store';
-import { syncAddToCart } from '@/lib/cartSync';
+import { syncAddToCart, syncUpdateCartItem } from '@/lib/cartSync';
 import { formatPrice } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
+import ProductImage from '@/components/product/ProductImage';
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -87,13 +88,23 @@ export default function ProductDetailPage() {
   };
 
   const handleInc = () => {
-    if (cartItem) updateQuantity(product.id, Math.min(cartItem.quantity + 1, product.stock));
-    else setQty(q => Math.min(q + 1, product.stock));
+    if (cartItem) {
+      const next = Math.min(cartItem.quantity + 1, product.stock);
+      updateQuantity(product.id, next);
+      syncUpdateCartItem(product.id, next);
+    } else {
+      setQty(q => Math.min(q + 1, product.stock));
+    }
   };
 
   const handleDec = () => {
-    if (cartItem) updateQuantity(product.id, cartItem.quantity - 1);
-    else setQty(q => Math.max(1, q - 1));
+    if (cartItem) {
+      const next = Math.max(0, cartItem.quantity - 1);
+      updateQuantity(product.id, next);
+      syncUpdateCartItem(product.id, next);
+    } else {
+      setQty(q => Math.max(1, q - 1));
+    }
   };
 
   const displayQty = cartItem ? cartItem.quantity : qty;
@@ -149,12 +160,21 @@ export default function ProductDetailPage() {
   };
 
   return (
-    <div className="pb-28 bg-[#F7F9FA]">
+    <div className="pb-28 bg-[#F7F9FA] md:max-w-5xl md:mx-auto md:pb-10">
       {/* Image section */}
-      <div className="relative bg-gray-100">
-        <div className="aspect-[4/3] relative">
+      <div className="relative bg-gray-100 md:rounded-3xl md:overflow-hidden md:mx-4 md:mt-4">
+        <div className="aspect-[4/3] relative md:aspect-[16/8]">
           {product.images[imgIdx] ? (
-            <Image src={product.images[imgIdx]} alt={product.name} fill className="object-cover" sizes="100vw" priority />
+            <ProductImage
+              name={product.name}
+              slug={product.slug}
+              categoryName={product.category?.name}
+              images={product.images[imgIdx] ? [product.images[imgIdx]] : product.images}
+              fill
+              className="object-cover"
+              sizes="100vw"
+              priority
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-8xl">🛒</div>
           )}
@@ -162,7 +182,7 @@ export default function ProductDetailPage() {
         </div>
 
         {/* Overlay buttons */}
-        <div className="absolute top-12 left-4 right-4 flex items-center justify-between">
+        <div className="absolute top-12 left-4 right-4 flex items-center justify-between md:top-6">
           <button type="button" aria-label="Go back" onClick={() => router.back()} className="w-9 h-9 bg-white/80 backdrop-blur-md rounded-xl flex items-center justify-center shadow-sm">
             <ArrowLeft className="w-4 h-4 text-gray-700" />
           </button>
@@ -202,7 +222,7 @@ export default function ProductDetailPage() {
       </div>
 
       {/* Content */}
-      <div className="px-4 pt-4 space-y-4">
+      <div className="px-4 pt-4 space-y-4 md:pt-5">
         {/* Name + price */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
@@ -311,7 +331,7 @@ export default function ProductDetailPage() {
       </div>
 
       {/* Fixed bottom CTA */}
-      <div className="keyboard-hide fixed bottom-16 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 px-4 py-3 flex items-center gap-3 shadow-lg">
+      <div className="keyboard-hide fixed bottom-16 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 px-4 py-3 flex items-center gap-3 shadow-lg md:static md:mt-6 md:mx-4 md:rounded-2xl md:border md:shadow-sm">
         <div className="flex items-center gap-2 bg-gray-100 rounded-2xl px-3 py-2.5">
           <button type="button" aria-label="Decrease quantity" onClick={handleDec} className="w-7 h-7 flex items-center justify-center text-gray-600">
             <Minus className="w-3.5 h-3.5" />

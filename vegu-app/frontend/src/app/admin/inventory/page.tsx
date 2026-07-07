@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { Search, Package, AlertTriangle, CheckCircle2, XCircle, ChevronLeft, ChevronRight, Pencil, Check } from 'lucide-react';
+import ProductImage from '@/components/product/ProductImage';
 
 type Product = {
   id: string; name: string; sku?: string; stock: number; unit: string;
@@ -104,7 +105,7 @@ export default function InventoryPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       {p.images?.[0] ? (
-                        <img src={p.images[0]} alt={p.name} className="w-8 h-8 rounded-lg object-cover bg-zinc-800 shrink-0" />
+                        <ProductImage name={p.name} images={p.images} categoryName={p.category.name} width={32} height={32} className="h-8 w-8 rounded-lg object-cover bg-zinc-800 shrink-0" />
                       ) : (
                         <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0"><Package className="w-3.5 h-3.5 text-zinc-600" /></div>
                       )}

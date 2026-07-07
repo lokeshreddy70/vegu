@@ -8,6 +8,7 @@ import { useCartStore } from '@/store/cart.store';
 import { syncAddToCart } from '@/lib/cartSync';
 import { resolveApiBase } from '@/lib/apiBase';
 import toast from 'react-hot-toast';
+import ProductImage from '@/components/product/ProductImage';
 
 const apiBase = resolveApiBase('');
 
@@ -547,8 +548,9 @@ export default function KitchenPage() {
                       onClick={() => send(`Suggest 2 recipes using ${p.name} and list all required ingredients.`)}
                       className="bg-white border border-gray-100 rounded-xl p-2 text-center shadow-sm"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.images?.[0] || ''} alt={p.name} loading="lazy" decoding="async" className="h-12 w-full object-cover rounded-md mb-1" />
+                      <div className="relative mb-1 h-12 w-full overflow-hidden rounded-md bg-gray-50">
+                        <ProductImage name={p.name} slug={p.slug} images={p.images} fill className="object-cover" sizes="96px" />
+                      </div>
                       <p className="text-[11px] text-gray-700 line-clamp-2">{p.name}</p>
                     </button>
                   ))}

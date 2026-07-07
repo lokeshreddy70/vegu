@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { Search, X, ChevronLeft, ChevronRight, MapPin, User, Clock, Package } from 'lucide-react';
+import ProductImage from '@/components/product/ProductImage';
 
 type OrderItem = { id: string; quantity: number; price: number; total: number; product: { name: string; images: string[] } };
 type Order = {
@@ -241,7 +242,7 @@ export default function OrdersPage() {
                         {orderDetail.items.map(item => (
                           <div key={item.id} className="flex items-center gap-3">
                             {item.product.images?.[0] ? (
-                              <img src={item.product.images[0]} alt={item.product.name} className="w-9 h-9 rounded-lg object-cover bg-zinc-800 shrink-0" />
+                              <ProductImage name={item.product.name} images={item.product.images} width={36} height={36} className="h-9 w-9 rounded-lg object-cover bg-zinc-800 shrink-0" />
                             ) : (
                               <div className="w-9 h-9 rounded-lg bg-zinc-800 shrink-0 flex items-center justify-center"><Package className="w-3.5 h-3.5 text-zinc-600" /></div>
                             )}

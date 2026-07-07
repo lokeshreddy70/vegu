@@ -10,6 +10,7 @@ import { resolveApiBase } from '@/lib/apiBase';
 import { formatPrice } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import WishlistButton from '@/components/product/WishlistButton';
+import ProductImage from '@/components/product/ProductImage';
 
 interface BazaarProduct {
   id: string; name: string; slug: string; price: number; comparePrice?: number | null;
@@ -68,7 +69,15 @@ function BazaarCard({
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden active:scale-[0.98] transition-transform">
         <div className="relative aspect-square bg-gray-50">
           {product.images[0] ? (
-            <Image src={product.images[0]} alt={product.name} fill className="object-cover" sizes="148px" />
+            <ProductImage
+              name={product.name}
+              slug={product.slug}
+              categoryName={product.category?.name}
+              images={product.images}
+              fill
+              className="object-cover"
+              sizes="148px"
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-3xl">🛒</div>
           )}
@@ -124,7 +133,7 @@ function BazaarRow({
           <p className="text-gray-400 text-[10px] mt-0.5">{subtitle}</p>
         </div>
       </div>
-      <div className="flex gap-3 px-4 overflow-x-auto pb-0.5 scrollbar-hide">
+      <div className="flex gap-3 px-4 overflow-x-auto overscroll-x-contain pb-0.5 scrollbar-hide">
         {items.map(p => <BazaarCard key={p.id} product={p} badge={badge(p)} />)}
       </div>
     </div>

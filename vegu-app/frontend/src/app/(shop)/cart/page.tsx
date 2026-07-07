@@ -8,6 +8,7 @@ import { useCartStore, useCartSubtotal } from '@/store/cart.store';
 import { syncUpdateCartItem, syncRemoveFromCart, syncClearCart } from '@/lib/cartSync';
 import { formatPrice } from '@/lib/utils';
 import { useHydrated } from '@/hooks/useHydrated';
+import ProductImage from '@/components/product/ProductImage';
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, clearCart } = useCartStore();
@@ -85,7 +86,7 @@ export default function CartPage() {
           <div key={item.product.id} className="bg-white rounded-2xl border border-gray-100 p-3 flex items-center gap-3 shadow-sm">
             <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-gray-50 shrink-0">
               {item.product.images[0] ? (
-                <Image src={item.product.images[0]} alt={item.product.name} fill className="object-cover" sizes="64px" />
+                <ProductImage name={item.product.name} slug={item.product.slug} images={item.product.images} fill className="object-cover" sizes="64px" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-2xl">🛒</div>
               )}
